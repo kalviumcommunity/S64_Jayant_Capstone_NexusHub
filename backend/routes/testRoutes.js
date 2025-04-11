@@ -1,10 +1,10 @@
 const express = require("express");
-const { createTest } = require("../controllers/testController");
-const { getTestMessage } = require("../controllers/testController");
+const { createTest, getTestMessage, updateTest } = require("../controllers/testController");
 
 const router = express.Router();
 
 router.get("/", getTestMessage);
 router.post("/create", createTest);
+router.put("/update/:id", updateTest);
 
 module.exports = router;
