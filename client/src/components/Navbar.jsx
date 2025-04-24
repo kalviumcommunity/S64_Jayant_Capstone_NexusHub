@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { useWindowScroll } from "react-use";
 import { useEffect, useRef, useState } from "react";
 import { TiLocationArrow } from "react-icons/ti";
+import { Link, useLocation } from "react-router-dom";
 
 import Button from "./Button";
 
@@ -11,6 +12,7 @@ const navItems = ["Home", "Features", "Prologue", "About", "Contact"];
 const NavBar = () => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isIndicatorActive, setIsIndicatorActive] = useState(false);
+  const location = useLocation();
 
   const audioElementRef = useRef(null);
   const navContainerRef = useRef(null);
@@ -25,10 +27,12 @@ const NavBar = () => {
   };
 
   useEffect(() => {
-    if (isAudioPlaying) {
-      audioElementRef.current.play();
-    } else {
-      audioElementRef.current.pause();
+    if (audioElementRef.current) {
+      if (isAudioPlaying) {
+        audioElementRef.current.play();
+      } else {
+        audioElementRef.current.pause();
+      }
     }
   }, [isAudioPlaying]);
 
@@ -55,6 +59,8 @@ const NavBar = () => {
     });
   }, [isNavVisible]);
 
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+
   return (
     <div
       ref={navContainerRef}
@@ -63,51 +69,72 @@ const NavBar = () => {
       <header className="absolute top-1/2 w-full -translate-y-1/2">
         <nav className="flex size-full items-center justify-between p-4">
           <div className="flex items-center gap-7">
-            <img src="/img/logo.png" alt="logo" className="w-10" />
+            <Link to="/">
+              <img src="/img/logo.png" alt="logo" className="w-10" />
+            </Link>
 
-            <Button
-              id="product-button"
-              title="LOGIN"
-              rightIcon={<TiLocationArrow />}
-              containerClass="bg-blue-50 md:flex hidden items-center justify-center gap-1"
-            />
+            {!isAuthPage && (
+              <Link to="/login">
+                <Button
+                  id="login-button"
+                  title="LOGIN"
+                  rightIcon={<TiLocationArrow />}
+                  containerClass="bg-blue-50 md:flex hidden items-center justify-center gap-1"
+                />
+              </Link>
+            )}
           </div>
 
           <div className="flex h-full items-center">
-            <div className="hidden md:block">
-              {navItems.map((item, index) => (
-                <a
-                  key={index}
-                  href={`#${item.toLowerCase()}`}
-                  className="nav-hover-btn"
-                >
-                  {item}
-                </a>
-              ))}
-            </div>
+            {!isAuthPage && (
+              <>
+                <div className="hidden md:block">
+                  {navItems.map((item, index) => (
+                    <a
+                      key={index}
+                      href={`#${item.toLowerCase()}`}
+                      className="nav-hover-btn"
+                    >
+                      {item}
+                    </a>
+                  ))}
+                </div>
 
-            <button
-              onClick={toggleAudioIndicator}
-              className="ml-10 flex items-center space-x-0.5"
-            >
-              <audio
-                ref={audioElementRef}
-                className="hidden"
-                src="/audio/loop.mp3"
-                loop
-              />
-              {[1, 2, 3, 4].map((bar) => (
-                <div
-                  key={bar}
-                  className={clsx("indicator-line", {
-                    active: isIndicatorActive,
-                  })}
-                  style={{
-                    animationDelay: `${bar * 0.1}s`,
-                  }}
+                <button
+                  onClick={toggleAudioIndicator}
+                  className="ml-10 flex items-center space-x-0.5"
+                >
+                  <audio
+                    ref={audioElementRef}
+                    className="hidden"
+                    src="/audio/loop.mp3"
+                    loop
+                  />
+                  {[1, 2, 3, 4].map((bar) => (
+                    <div
+                      key={bar}
+                      className={clsx("indicator-line", {
+                        active: isIndicatorActive,
+                      })}
+                      style={{
+                        animationDelay: `${bar * 0.1}s`,
+                      }}
+                    />
+                  ))}
+                </button>
+              </>
+            )}
+
+            {isAuthPage && (
+              <Link to={location.pathname === '/login' ? '/signup' : '/login'}>
+                <Button
+                  id="auth-switch-button"
+                  title={location.pathname === '/login' ? 'SIGN UP' : 'LOGIN'}
+                  rightIcon={<TiLocationArrow />}
+                  containerClass="bg-blue-50 md:flex hidden items-center justify-center gap-1"
                 />
-              ))}
-            </button>
+              </Link>
+            )}
           </div>
         </nav>
       </header>
