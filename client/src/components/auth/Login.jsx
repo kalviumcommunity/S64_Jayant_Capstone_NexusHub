@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { TiLocationArrow } from "react-icons/ti";
+import Button from '../Button';
 
 const Login = () => {
   const [showLoginForm, setShowLoginForm] = useState(false);
@@ -89,6 +90,23 @@ const Login = () => {
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
+      {/* Navigation Buttons */}
+      <div className="absolute top-4 left-4 z-50">
+        <Link to="/">
+          <img src="/img/logo.png" alt="logo" className="w-10 hover:scale-110 transition-transform" />
+        </Link>
+      </div>
+      <div className="absolute top-4 right-4 z-50">
+        <Link to="/signup">
+          <Button
+            id="signup-button"
+            title="SIGN UP"
+            rightIcon={<TiLocationArrow />}
+            containerClass="bg-blue-50 md:flex hidden items-center justify-center gap-1"
+          />
+        </Link>
+      </div>
+
       {/* Intro Video */}
       <video
         ref={introVideoRef}

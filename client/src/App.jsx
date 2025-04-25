@@ -9,20 +9,23 @@ import Contact from './components/Contact'
 import Footer from './components/Footer'
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
+import Profile from './pages/Profile'
 
 const AppContent = () => {
   const location = useLocation();
-  const isAuthPage = ['/login', '/signup'].includes(location.pathname);
+  const isAuthPage = ['/login', '/signup', '/profile'].includes(location.pathname);
 
   return (
     <div className='relative min-h-screen w-screen overflow-x-hidden'>
-      <Navbar />
+      {!isAuthPage && <Navbar />}
       <main className='w-full'>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/" element={
             <>
+              <Navbar />
               <Hero />
               <About />
               <Features />

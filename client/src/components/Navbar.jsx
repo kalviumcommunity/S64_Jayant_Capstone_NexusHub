@@ -3,16 +3,24 @@ import gsap from "gsap";
 import { useWindowScroll } from "react-use";
 import { useEffect, useRef, useState } from "react";
 import { TiLocationArrow } from "react-icons/ti";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { initializeTransitions } from "../utils/transitions";
 
 import Button from "./Button";
 
-const navItems = ["Home", "Features", "Prologue", "About", "Contact"];
+const navItems = [
+  { name: "Home", type: "hash" },
+  { name: "Features", type: "hash" },
+  { name: "About", type: "hash" },
+  { name: "Contact", type: "hash" },
+  { name: "Profile", type: "route", path: "/profile" }
+];
 
 const NavBar = () => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isIndicatorActive, setIsIndicatorActive] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const audioElementRef = useRef(null);
   const navContainerRef = useRef(null);
@@ -24,6 +32,33 @@ const NavBar = () => {
   const toggleAudioIndicator = () => {
     setIsAudioPlaying((prev) => !prev);
     setIsIndicatorActive((prev) => !prev);
+  };
+
+  const handleNavClick = async (item) => {
+    if (item.type === "route") {
+      const loader = document.querySelector(".loader");
+      if (loader) {
+        // Reset loader position
+        loader.style.transform = "translateX(-100%)";
+        // Force a reflow
+        loader.offsetHeight;
+        // Start transition
+        loader.style.transform = "translateX(0%)";
+        
+        // Navigate after a longer delay to match the new transition
+        setTimeout(() => {
+          navigate(item.path);
+        }, 300);
+      } else {
+        navigate(item.path);
+      }
+    } else {
+      // Handle hash navigation
+      const element = document.querySelector(`#${item.name.toLowerCase()}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
   };
 
   useEffect(() => {
@@ -39,13 +74,13 @@ const NavBar = () => {
   useEffect(() => {
     if (currentScrollY === 0) {
       setIsNavVisible(true);
-      navContainerRef.current.classList.remove("floating-nav");
+      navContainerRef.current?.classList.remove("floating-nav");
     } else if (currentScrollY > lastScrollY) {
       setIsNavVisible(false);
-      navContainerRef.current.classList.add("floating-nav");
+      navContainerRef.current?.classList.add("floating-nav");
     } else if (currentScrollY < lastScrollY) {
       setIsNavVisible(true);
-      navContainerRef.current.classList.add("floating-nav");
+      navContainerRef.current?.classList.add("floating-nav");
     }
 
     setLastScrollY(currentScrollY);
@@ -90,13 +125,13 @@ const NavBar = () => {
               <>
                 <div className="hidden md:block">
                   {navItems.map((item, index) => (
-                    <a
+                    <button
                       key={index}
-                      href={`#${item.toLowerCase()}`}
+                      onClick={() => handleNavClick(item)}
                       className="nav-hover-btn"
                     >
-                      {item}
-                    </a>
+                      {item.name}
+                    </button>
                   ))}
                 </div>
 
