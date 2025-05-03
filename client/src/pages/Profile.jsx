@@ -1,25 +1,65 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/transitions.css';
 
 const Profile = () => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const defaultProfile = {
+    name: 'John Doe',
+    title: 'Professional Developer',
+    about: 'Full-stack developer with expertise in React, Node.js, and cloud technologies. Passionate about creating beautiful and functional web applications.',
+    skills: ['React', 'Node.js', 'TypeScript', 'AWS', 'UI/UX', 'GraphQL']
+  };
+
+  const [profileData, setProfileData] = useState(defaultProfile);
+
+  // Load from localStorage on mount
   useEffect(() => {
-    // Handle initial loader position
+    const storedProfile = localStorage.getItem('profileData');
+    if (storedProfile) {
+      setProfileData(JSON.parse(storedProfile));
+    }
+
+    // Hide loader
     const loader = document.querySelector(".loader");
     if (loader) {
       loader.style.transform = "translateX(100%)";
     }
   }, []);
 
+  const handleEditProfile = () => {
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSkillsChange = (e) => {
+    const skills = e.target.value.split(',').map(skill => skill.trim());
+    setProfileData(prev => ({
+      ...prev,
+      skills
+    }));
+  };
+
+  const handleSaveChanges = () => {
+    localStorage.setItem('profileData', JSON.stringify(profileData));
+    setIsEditModalOpen(false);
+  };
+
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-br from-[#0A0A0A] to-[#1F1F1F]">
       {/* Background Video */}
-      <video
-        className="absolute inset-0 w-full h-full object-cover opacity-40"
-        autoPlay
-        muted
-        loop
-      >
+      <video className="absolute inset-0 w-full h-full object-cover opacity-40" autoPlay muted loop>
         <source src="/videos/NexusCrystal.mp4" type="video/mp4" />
       </video>
 
@@ -37,15 +77,16 @@ const Profile = () => {
               </div>
               <div>
                 <h1 className="text-4xl font-zentry font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                  John Doe
+                  {profileData.name}
                 </h1>
-                <p className="text-white/60 font-robert-regular mt-1">
-                  Professional Developer
-                </p>
+                <p className="text-white/60 font-robert-regular mt-1">{profileData.title}</p>
               </div>
             </div>
             <div className="flex gap-4">
-              <button className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-robert-medium hover:bg-white/10 transition-all">
+              <button 
+                onClick={handleEditProfile}
+                className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-robert-medium hover:bg-white/10 transition-all"
+              >
                 Edit Profile
               </button>
               <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all">
@@ -60,20 +101,14 @@ const Profile = () => {
             <div className="space-y-6">
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                 <h3 className="text-lg font-robert-medium text-white mb-4">About</h3>
-                <p className="text-white/60 font-robert-regular">
-                  Full-stack developer with expertise in React, Node.js, and cloud technologies.
-                  Passionate about creating beautiful and functional web applications.
-                </p>
+                <p className="text-white/60 font-robert-regular">{profileData.about}</p>
               </div>
 
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                 <h3 className="text-lg font-robert-medium text-white mb-4">Skills</h3>
                 <div className="flex flex-wrap gap-2">
-                  {['React', 'Node.js', 'TypeScript', 'AWS', 'UI/UX', 'GraphQL'].map((skill) => (
-                    <span
-                      key={skill}
-                      className="px-3 py-1 rounded-lg bg-white/5 text-white/80 text-sm font-robert-regular"
-                    >
+                  {profileData.skills.map((skill) => (
+                    <span key={skill} className="px-3 py-1 rounded-lg bg-white/5 text-white/80 text-sm font-robert-regular">
                       {skill}
                     </span>
                   ))}
@@ -81,7 +116,7 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Center and Right Columns */}
+            {/* Right Columns */}
             <div className="md:col-span-2 space-y-6">
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                 <h3 className="text-lg font-robert-medium text-white mb-4">Recent Projects</h3>
@@ -107,17 +142,77 @@ const Profile = () => {
         </div>
       </div>
 
+      {/* Edit Profile Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseModal} />
+          <div className="relative bg-[#1A1A1A] rounded-2xl p-8 w-full max-w-2xl mx-4 border border-white/10">
+            <h2 className="text-2xl font-zentry font-bold text-white mb-6">Edit Profile</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-white/80 font-robert-medium mb-2">Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={profileData.name}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 font-robert-medium mb-2">Title</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={profileData.title}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 font-robert-medium mb-2">About</label>
+                <textarea
+                  name="about"
+                  value={profileData.about}
+                  onChange={handleInputChange}
+                  rows="4"
+                  className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 font-robert-medium mb-2">Skills (comma-separated)</label>
+                <input
+                  type="text"
+                  value={profileData.skills.join(', ')}
+                  onChange={handleSkillsChange}
+                  className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-8">
+              <button
+                onClick={handleCloseModal}
+                className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-robert-medium hover:bg-white/10 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveChanges}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Back Button */}
       <Link
         to="/"
         className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-robert-medium hover:bg-white/10 transition-all backdrop-blur-sm"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-5 w-5"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path
             fillRule="evenodd"
             d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
@@ -133,4 +228,4 @@ const Profile = () => {
   );
 };
 
-export default Profile; 
+export default Profile;
