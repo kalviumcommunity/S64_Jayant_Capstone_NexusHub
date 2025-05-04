@@ -22,6 +22,7 @@ const Login = () => {
     password: ''
   });
 
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
@@ -46,6 +47,7 @@ const Login = () => {
           ease: 'power2.inOut',
           onComplete: () => {
             setShowLoginForm(true);
+
             // Play background video
             if (bgVideoRef.current) {
               bgVideoRef.current.play();
@@ -56,7 +58,7 @@ const Login = () => {
     }
   }, []);
 
-  // Animation for login form entry
+  // Animation for login form entry for better view of the page
   useEffect(() => {
     if (showLoginForm) {
       if (formContainerRef.current) {
