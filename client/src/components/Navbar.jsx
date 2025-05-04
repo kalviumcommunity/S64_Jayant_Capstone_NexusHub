@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { TiLocationArrow } from "react-icons/ti";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { initializeTransitions } from "../utils/transitions";
+import { useAuth } from "../context/AuthContext.jsx";
 
 import Button from "./Button";
 
@@ -17,6 +18,7 @@ const navItems = [
 ];
 
 const NavBar = () => {
+  const { isAuthenticated, user, logout } = useAuth();
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isIndicatorActive, setIsIndicatorActive] = useState(false);
   const location = useLocation();
@@ -108,7 +110,7 @@ const NavBar = () => {
               <img src="/img/logo.png" alt="logo" className="w-10" />
             </Link>
 
-            {!isAuthPage && (
+            {!isAuthPage && !isAuthenticated && (
               <Link to="/login">
                 <Button
                   id="login-button"
@@ -118,21 +120,49 @@ const NavBar = () => {
                 />
               </Link>
             )}
+            
+            {isAuthenticated && (
+              <div className="hidden md:flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                  {user?.name?.charAt(0) || 'U'}
+                </div>
+                <span className="text-white text-sm">{user?.name || 'User'}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex h-full items-center">
             {!isAuthPage && (
               <>
                 <div className="hidden md:block">
-                  {navItems.map((item, index) => (
+                  {navItems.map((item, index) => {
+                    // Skip Profile link if not authenticated
+                    if (item.name === "Profile" && !isAuthenticated) {
+                      return null;
+                    }
+                    
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleNavClick(item)}
+                        className="nav-hover-btn"
+                      >
+                        {item.name}
+                      </button>
+                    );
+                  })}
+                  
+                  {isAuthenticated && (
                     <button
-                      key={index}
-                      onClick={() => handleNavClick(item)}
-                      className="nav-hover-btn"
+                      onClick={() => {
+                        logout();
+                        navigate('/');
+                      }}
+                      className="nav-hover-btn text-red-400"
                     >
-                      {item.name}
+                      Logout
                     </button>
-                  ))}
+                  )}
                 </div>
 
                 <button

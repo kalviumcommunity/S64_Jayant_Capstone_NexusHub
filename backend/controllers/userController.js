@@ -7,7 +7,7 @@ const sendEmail = require("../utils/sendEmail");
 
 // Generate JWT Token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET_KEY, {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "30d"
   });
 };
@@ -35,12 +35,17 @@ const register = async (req, res) => {
       verificationToken
     });
 
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
-    await sendEmail({
-      email: user.email,
-      subject: "Verify your NexusHub account",
-      html: `Please click this link to verify your email: <a href="${verificationUrl}">${verificationUrl}</a>`
-    });
+    try {
+      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+      await sendEmail({
+        email: user.email,
+        subject: "Verify your NexusHub account",
+        html: `Please click this link to verify your email: <a href="${verificationUrl}">${verificationUrl}</a>`
+      });
+    } catch (emailError) {
+      console.error("Error sending verification email:", emailError);
+      // Continue with registration even if email fails
+    }
 
     const token = generateToken(user._id);
 

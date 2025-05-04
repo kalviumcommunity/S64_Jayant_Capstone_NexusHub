@@ -38,10 +38,13 @@ const userSchema = new mongoose.Schema({
     github: String,
     instagram: String
   },
-  isVerified: {
+  isEmailVerified: {
     type: Boolean,
     default: false
   },
+  verificationToken: String,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
   lastActive: {
     type: Date,
     default: Date.now
