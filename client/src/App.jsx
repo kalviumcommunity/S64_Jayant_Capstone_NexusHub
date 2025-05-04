@@ -11,12 +11,13 @@ import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
 import Profile from './pages/Profile'
 import Dashboard from './pages/Dashboard'
+import OAuthSuccess from './pages/OAuthSuccess'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext.jsx'
 
 const AppContent = () => {
   const location = useLocation();
-  const isAuthPage = ['/login', '/signup', '/profile'].includes(location.pathname);
+  const isAuthPage = ['/login', '/signup', '/profile', '/oauth-success'].includes(location.pathname);
 
   return (
     <div className='relative min-h-screen w-screen overflow-x-hidden'>
@@ -26,6 +27,7 @@ const AppContent = () => {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/" element={
             <>
               <Navbar />
