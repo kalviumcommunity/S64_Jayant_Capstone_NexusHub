@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/transitions.css';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const Profile = () => {
+  const navigate = useNavigate();
+  const { user, logout, updateProfile, loading } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+  
   const defaultProfile = {
     name: 'John Doe',
     title: 'Professional Developer',
@@ -13,11 +19,19 @@ const Profile = () => {
 
   const [profileData, setProfileData] = useState(defaultProfile);
 
-  // Load from localStorage on mount
+  // Load user data on mount
   useEffect(() => {
-    const storedProfile = localStorage.getItem('profileData');
-    if (storedProfile) {
-      setProfileData(JSON.parse(storedProfile));
+    if (user) {
+      // Initialize profile data from user object
+      setProfileData(prevData => ({
+        ...prevData,
+        name: user.name || prevData.name,
+        // If user has a title in their profile, use it, otherwise keep default
+        title: user.title || prevData.title,
+        about: user.bio || prevData.about,
+        // If user has skills, use them, otherwise keep default
+        skills: user.skills || prevData.skills
+      }));
     }
 
     // Hide loader
@@ -25,7 +39,12 @@ const Profile = () => {
     if (loader) {
       loader.style.transform = "translateX(100%)";
     }
-  }, []);
+  }, [user]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const handleEditProfile = () => {
     setIsEditModalOpen(true);
@@ -33,6 +52,7 @@ const Profile = () => {
 
   const handleCloseModal = () => {
     setIsEditModalOpen(false);
+    setUpdateError('');
   };
 
   const handleInputChange = (e) => {
@@ -41,6 +61,9 @@ const Profile = () => {
       ...prev,
       [name]: value
     }));
+    
+    // Clear error when user starts typing
+    if (updateError) setUpdateError('');
   };
 
   const handleSkillsChange = (e) => {
@@ -49,12 +72,45 @@ const Profile = () => {
       ...prev,
       skills
     }));
+    
+    // Clear error when user starts typing
+    if (updateError) setUpdateError('');
   };
 
-  const handleSaveChanges = () => {
-    localStorage.setItem('profileData', JSON.stringify(profileData));
-    setIsEditModalOpen(false);
+  const handleSaveChanges = async () => {
+    setIsUpdating(true);
+    setUpdateError('');
+    
+    try {
+      // Create update data object
+      const updateData = {
+        name: profileData.name,
+        bio: profileData.about,
+        // Add other fields as needed
+        skills: profileData.skills
+      };
+      
+      // Call API to update profile
+      await updateProfile(updateData);
+      setIsEditModalOpen(false);
+      
+      // Also update local storage for persistence
+      localStorage.setItem('profileData', JSON.stringify(profileData));
+    } catch (err) {
+      setUpdateError(err.response?.data?.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-[#0A0A0A] to-[#1F1F1F]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-br from-[#0A0A0A] to-[#1F1F1F]">
@@ -73,13 +129,26 @@ const Profile = () => {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12">
             <div className="flex items-center gap-6 mb-6 md:mb-0">
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 p-1">
-                <div className="w-full h-full rounded-2xl bg-black/40 backdrop-blur-sm" />
+                <div className="w-full h-full rounded-2xl bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                  {user?.profilePicture ? (
+                    <img 
+                      src={user.profilePicture} 
+                      alt={profileData.name} 
+                      className="w-full h-full rounded-2xl object-cover"
+                    />
+                  ) : (
+                    <span className="text-3xl text-white font-bold">
+                      {profileData.name.charAt(0)}
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <h1 className="text-4xl font-zentry font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
                   {profileData.name}
                 </h1>
                 <p className="text-white/60 font-robert-regular mt-1">{profileData.title}</p>
+                <p className="text-white/40 text-sm mt-1">{user?.email}</p>
               </div>
             </div>
             <div className="flex gap-4">
@@ -89,8 +158,11 @@ const Profile = () => {
               >
                 Edit Profile
               </button>
-              <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all">
-                Share Profile
+              <button 
+                onClick={handleLogout}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
+              >
+                Logout
               </button>
             </div>
           </div>
@@ -148,6 +220,13 @@ const Profile = () => {
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseModal} />
           <div className="relative bg-[#1A1A1A] rounded-2xl p-8 w-full max-w-2xl mx-4 border border-white/10">
             <h2 className="text-2xl font-zentry font-bold text-white mb-6">Edit Profile</h2>
+            
+            {updateError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200 text-sm">
+                {updateError}
+              </div>
+            )}
+            
             <div className="space-y-4">
               <div>
                 <label className="block text-white/80 font-robert-medium mb-2">Name</label>
@@ -157,6 +236,7 @@ const Profile = () => {
                   value={profileData.name}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                  disabled={isUpdating}
                 />
               </div>
               <div>
@@ -167,6 +247,7 @@ const Profile = () => {
                   value={profileData.title}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                  disabled={isUpdating}
                 />
               </div>
               <div>
@@ -177,6 +258,7 @@ const Profile = () => {
                   onChange={handleInputChange}
                   rows="4"
                   className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                  disabled={isUpdating}
                 />
               </div>
               <div>
@@ -186,6 +268,7 @@ const Profile = () => {
                   value={profileData.skills.join(', ')}
                   onChange={handleSkillsChange}
                   className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                  disabled={isUpdating}
                 />
               </div>
             </div>
@@ -193,14 +276,23 @@ const Profile = () => {
               <button
                 onClick={handleCloseModal}
                 className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-robert-medium hover:bg-white/10 transition-all"
+                disabled={isUpdating}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveChanges}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
+                disabled={isUpdating}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Save Changes
+                {isUpdating ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Saving...
+                  </div>
+                ) : (
+                  'Save Changes'
+                )}
               </button>
             </div>
           </div>

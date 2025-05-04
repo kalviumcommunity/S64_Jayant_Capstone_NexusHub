@@ -10,6 +10,9 @@ import Footer from './components/Footer'
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
 import Profile from './pages/Profile'
+import Dashboard from './pages/Dashboard'
+import ProtectedRoute from './components/auth/ProtectedRoute'
+import { AuthProvider } from './context/AuthContext.jsx'
 
 const AppContent = () => {
   const location = useLocation();
@@ -20,9 +23,9 @@ const AppContent = () => {
       {!isAuthPage && <Navbar />}
       <main className='w-full'>
         <Routes>
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/profile" element={<Profile />} />
           <Route path="/" element={
             <>
               <Navbar />
@@ -33,6 +36,13 @@ const AppContent = () => {
               <Contact />
             </>
           } />
+          
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            {/* Add other protected routes here */}
+          </Route>
         </Routes>
       </main>
       {!isAuthPage && <Footer />}
@@ -43,7 +53,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <Router>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 };

@@ -1,21 +1,36 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { TiLocationArrow } from "react-icons/ti";
 import Button from '../Button';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { validateSignupForm } from '../..//utils/validation.js';
 
 const Signup = () => {
-  const [showSignupForm, setShowSignupForm] = useState(false);
+  const navigate = useNavigate();
+  const { register, isAuthenticated } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [signupError, setSignupError] = useState('');
+  const [passwordMatch, setPasswordMatch] = useState(true);
+  
   const introVideoRef = useRef(null);
   const bgVideoRef = useRef(null);
   const formContainerRef = useRef(null);
   const contentRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     // Handle initial loader position with smoother transition
@@ -55,15 +70,71 @@ const Signup = () => {
   }, []);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (signupError) setSignupError('');
+    
+    // Check password match when either password field changes
+    if (name === 'password' || name === 'confirmPassword') {
+      if (name === 'password') {
+        setPasswordMatch(value === formData.confirmPassword || formData.confirmPassword === '');
+      } else {
+        setPasswordMatch(value === formData.password);
+      }
+    }
+    
+    // Generate username from name if username is empty
+    if (name === 'name' && !formData.username) {
+      const username = value.toLowerCase().replace(/\s+/g, '');
+      setFormData(prev => ({
+        ...prev,
+        username
+      }));
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Signup attempt with:', formData);
+    
+    // Validate form
+    const { isValid, errors } = validateSignupForm(formData);
+    if (!isValid) {
+      // Display the first error
+      const firstError = Object.values(errors)[0];
+      setSignupError(firstError);
+      
+      // If password mismatch is the error, also set the visual indicator
+      if (errors.confirmPassword === 'Passwords do not match') {
+        setPasswordMatch(false);
+      }
+      
+      return;
+    }
+    
+    setIsLoading(true);
+    setSignupError('');
+    
+    try {
+      // Create registration data object (exclude confirmPassword)
+      const registrationData = {
+        name: formData.name,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      };
+      
+      await register(registrationData);
+      // Successful registration will trigger the useEffect to redirect
+    } catch (err) {
+      setSignupError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -99,6 +170,12 @@ const Signup = () => {
               CREATE ACCOUNT
             </h2>
             
+            {signupError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200 text-sm">
+                {signupError}
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="form-element">
                 <label className="block text-sm font-medium text-white/70 mb-2">
@@ -112,6 +189,23 @@ const Signup = () => {
                   className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white font-circular-web focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all placeholder-white/30"
                   placeholder="Enter your full name"
                   required
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="form-element">
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white font-circular-web focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all placeholder-white/30"
+                  placeholder="Choose a username"
+                  required
+                  disabled={isLoading}
                 />
               </div>
 
@@ -127,6 +221,7 @@ const Signup = () => {
                   className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white font-circular-web focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all placeholder-white/30"
                   placeholder="Enter your email"
                   required
+                  disabled={isLoading}
                 />
               </div>
               
@@ -142,6 +237,7 @@ const Signup = () => {
                   className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white font-circular-web focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all placeholder-white/30"
                   placeholder="Create a password"
                   required
+                  disabled={isLoading}
                 />
               </div>
 
@@ -154,17 +250,29 @@ const Signup = () => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white font-circular-web focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all placeholder-white/30"
+                  className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${!passwordMatch ? 'border-red-500' : 'border-white/10'} text-white font-circular-web focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all placeholder-white/30`}
                   placeholder="Confirm your password"
                   required
+                  disabled={isLoading}
                 />
+                {!passwordMatch && (
+                  <p className="mt-1 text-xs text-red-400">Passwords do not match</p>
+                )}
               </div>
               
               <button
                 type="submit"
-                className="form-element w-full py-3 px-6 text-center text-white font-medium bg-gradient-to-r from-purple-600 to-blue-500 rounded-lg transition-all duration-300 hover:from-purple-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 hover:scale-[1.02] active:scale-[0.98] mt-8"
+                disabled={isLoading || !passwordMatch}
+                className="form-element w-full py-3 px-6 text-center text-white font-medium bg-gradient-to-r from-purple-600 to-blue-500 rounded-lg transition-all duration-300 hover:from-purple-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 hover:scale-[1.02] active:scale-[0.98] mt-8 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                Sign Up
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Creating Account...
+                  </div>
+                ) : (
+                  'Sign Up'
+                )}
               </button>
             </form>
           </div>

@@ -7,13 +7,13 @@ const {
   forgotPassword,
   resetPassword
 } = require('../controllers/authController');
-const protect  = require('../middleware/authMiddleware');
+const protect  = require('../middleware/protectMiddleware');
 
 // Auth routes
-router.post('/register', protect, register);
-router.post('/login', protect, login);
-router.get('/verify-email/:token', protect, verifyEmail);
-router.post('/forgot-password', protect, forgotPassword);
-router.post('/reset-password/:token', protect, resetPassword);
+router.post('/register', register);
+router.post('/login', login);
+router.get('/verify-email/:token', verifyEmail);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password/:token', resetPassword);
 
 module.exports = router; 
