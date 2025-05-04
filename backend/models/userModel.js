@@ -38,6 +38,9 @@ const userSchema = new mongoose.Schema({
     github: String,
     instagram: String
   },
+  // OAuth fields
+  googleId: String,
+  githubId: String,
   isEmailVerified: {
     type: Boolean,
     default: false

@@ -5,6 +5,7 @@ import { TiLocationArrow } from "react-icons/ti";
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { validateSignupForm } from '../..//utils/validation.js';
+import OAuthButtons from './OAuthButtons';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -138,10 +139,10 @@ const Signup = () => {
   };
 
   return (
-    <div className="relative h-screen w-full overflow-hidden">
+    <div className="relative min-h-screen w-full overflow-y-auto overflow-x-hidden">
       
       {/* Main Content Container - Increased z-index */}
-      <div className="main-content absolute inset-0 z-[100]">
+      <div className="main-content absolute inset-0 z-[100] overflow-y-auto overflow-x-hidden">
         {/* Navigation Buttons - Higher z-index */}
         <div className="absolute top-4 left-4 z-50">
           <Link to="/">
@@ -160,7 +161,7 @@ const Signup = () => {
         </div>
         
         {/* Content Container */}
-        <div className="container mx-auto h-full flex items-center justify-between px-4 lg:px-8 z-[110] opacity-100 mt-5 ml-1">
+        <div className="container mx-auto min-h-screen py-20 flex items-center justify-between px-4 lg:px-8 z-[110] opacity-100">
           {/* Signup Form - Higher z-index */}
           <div
             ref={formContainerRef}
@@ -274,6 +275,9 @@ const Signup = () => {
                   'Sign Up'
                 )}
               </button>
+              
+              {/* OAuth Buttons */}
+              <OAuthButtons />
             </form>
           </div>
 

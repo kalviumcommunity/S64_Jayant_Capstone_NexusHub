@@ -5,6 +5,7 @@ import { TiLocationArrow } from "react-icons/ti";
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { validateLoginForm } from '../../utils/validation.js';
+import OAuthButtons from './OAuthButtons';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -245,6 +246,9 @@ const Login = () => {
                   'Sign In'
                 )}
               </button>
+              
+              {/* OAuth Buttons */}
+              <OAuthButtons />
             </form>
             </div>
 

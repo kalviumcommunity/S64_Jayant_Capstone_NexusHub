@@ -11,6 +11,24 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Handle OAuth login
+  const setOAuthLogin = async (token, userId) => {
+    try {
+      // Save token
+      localStorage.setItem('token', token);
+      
+      // Fetch user data
+      const response = await api.get('/auth/profile');
+      setUser(response.data.user);
+      
+      // Save user data
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    } catch (err) {
+      console.error('OAuth login error:', err);
+      localStorage.removeItem('token');
+    }
+  };
 
   // Check if user is already logged in (on app load)
   useEffect(() => {
@@ -145,6 +163,7 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     forgotPassword,
     resetPassword,
+    setOAuthLogin,
     isAuthenticated: !!user,
   };
 
