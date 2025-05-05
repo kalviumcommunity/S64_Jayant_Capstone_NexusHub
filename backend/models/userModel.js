@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'default-avatar.png'
   },
+  skills: {
+    type: [String],
+    default: []
+  },
   socialLinks: {
     twitter: String,
     linkedin: String,

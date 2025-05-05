@@ -4,6 +4,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
+const path = require("path");
+const fs = require("fs");
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -149,8 +151,8 @@ const updateProfile = async (req, res) => {
       bio,
       location,
       website,
-      profilePicture,
-      socialLinks
+      socialLinks,
+      skills
     } = req.body;
 
     const user = await User.findById(req.user.id);
@@ -173,30 +175,83 @@ const updateProfile = async (req, res) => {
       user.password = await bcrypt.hash(newPassword, salt);
     }
 
+    // Handle profile picture if it's in the request
+    if (req.file) {
+      // If user already has a profile picture that's not the default, delete it
+      if (user.profilePicture && user.profilePicture !== 'default-avatar.png' && !user.profilePicture.includes('http')) {
+        const oldPicturePath = path.join(__dirname, '../uploads/profile-images', path.basename(user.profilePicture));
+        if (fs.existsSync(oldPicturePath)) {
+          fs.unlinkSync(oldPicturePath);
+        }
+      }
+      
+      // Set the new profile picture path
+      const profilePicturePath = `/uploads/profile-images/${req.file.filename}`;
+      user.profilePicture = profilePicturePath;
+    }
+
+    // Update user fields if provided
     if (username) user.username = username;
     if (email) user.email = email;
     if (name) user.name = name;
     if (bio) user.bio = bio;
     if (location) user.location = location;
     if (website) user.website = website;
-    if (profilePicture) user.profilePicture = profilePicture;
     if (socialLinks) user.socialLinks = socialLinks;
+    
+    // Update skills if provided
+    if (skills) {
+      try {
+        // If skills is a JSON string (from FormData), parse it
+        if (typeof skills === 'string' && skills.startsWith('[')) {
+          user.skills = JSON.parse(skills);
+        } 
+        // If skills is a comma-separated string
+        else if (typeof skills === 'string') {
+          // Split by comma, trim each skill to remove leading/trailing whitespace
+          // This preserves spaces within each skill name
+          user.skills = skills.split(',')
+            .map(skill => skill.trim())
+            .filter(skill => skill !== ''); // Remove empty skills
+        } 
+        // If skills is already an array
+        else if (Array.isArray(skills)) {
+          // Make sure to trim each skill and filter out empty ones
+          user.skills = skills
+            .map(skill => typeof skill === 'string' ? skill.trim() : skill)
+            .filter(skill => skill !== '');
+        }
+      } catch (error) {
+        console.error('Error parsing skills:', error);
+        // If parsing fails, try to use it as a comma-separated string
+        if (typeof skills === 'string') {
+          user.skills = skills.split(',')
+            .map(skill => skill.trim())
+            .filter(skill => skill !== '');
+        }
+      }
+    }
 
     const updatedUser = await user.save();
+    
+    // Prepare user object for response
+    const userResponse = {
+      _id: updatedUser._id,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      bio: updatedUser.bio,
+      location: updatedUser.location,
+      website: updatedUser.website,
+      profilePicture: updatedUser.profilePicture,
+      socialLinks: updatedUser.socialLinks,
+      skills: updatedUser.skills
+    };
+
     res.json({
       success: true,
       message: "Profile updated successfully",
-      user: {
-        _id: updatedUser._id,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        bio: updatedUser.bio,
-        location: updatedUser.location,
-        website: updatedUser.website,
-        profilePicture: updatedUser.profilePicture,
-        socialLinks: updatedUser.socialLinks
-      }
+      user: userResponse
     });
   } catch (error) {
     res.status(500).json({

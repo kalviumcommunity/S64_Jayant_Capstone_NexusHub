@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/transitions.css';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -9,6 +9,9 @@ const Profile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState('');
+  const fileInputRef = useRef(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   
   const defaultProfile = {
     name: 'John Doe',
@@ -32,6 +35,13 @@ const Profile = () => {
         // If user has skills, use them, otherwise keep default
         skills: user.skills || prevData.skills
       }));
+      
+      // Set profile picture if available
+      if (user.profilePicture) {
+        setPreviewImage(user.profilePicture.startsWith('http') 
+          ? user.profilePicture 
+          : `http://localhost:5000${user.profilePicture}`);
+      }
     }
 
     // Hide loader
@@ -53,6 +63,10 @@ const Profile = () => {
   const handleCloseModal = () => {
     setIsEditModalOpen(false);
     setUpdateError('');
+    setSelectedImage(null);
+    setPreviewImage(user?.profilePicture ? 
+      (user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`) 
+      : null);
   };
 
   const handleInputChange = (e) => {
@@ -67,7 +81,9 @@ const Profile = () => {
   };
 
   const handleSkillsChange = (e) => {
-    const skills = e.target.value.split(',').map(skill => skill.trim());
+    // Split by comma and trim each skill to remove leading/trailing whitespace
+    // This preserves spaces within each skill name
+    const skills = e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill !== '');
     setProfileData(prev => ({
       ...prev,
       skills
@@ -76,23 +92,61 @@ const Profile = () => {
     // Clear error when user starts typing
     if (updateError) setUpdateError('');
   };
+  
+  const handleImageClick = () => {
+    // Trigger file input click
+    fileInputRef.current.click();
+  };
+  
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedImage(file);
+      
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSaveChanges = async () => {
     setIsUpdating(true);
     setUpdateError('');
     
     try {
-      // Create update data object
-      const updateData = {
-        name: profileData.name,
-        bio: profileData.about,
-        // Add other fields as needed
-        skills: profileData.skills
-      };
+      // Create FormData if there's an image to upload
+      let updateData;
+      
+      if (selectedImage) {
+        updateData = new FormData();
+        updateData.append('profilePicture', selectedImage);
+        updateData.append('name', profileData.name);
+        updateData.append('bio', profileData.about);
+        updateData.append('title', profileData.title);
+        
+        // Append skills as JSON string
+        if (profileData.skills && profileData.skills.length > 0) {
+          updateData.append('skills', JSON.stringify(profileData.skills));
+        }
+      } else {
+        // Regular JSON data if no image
+        updateData = {
+          name: profileData.name,
+          bio: profileData.about,
+          title: profileData.title,
+          skills: profileData.skills
+        };
+      }
       
       // Call API to update profile
       await updateProfile(updateData);
       setIsEditModalOpen(false);
+      
+      // Reset image selection
+      setSelectedImage(null);
       
       // Also update local storage for persistence
       localStorage.setItem('profileData', JSON.stringify(profileData));
@@ -130,9 +184,15 @@ const Profile = () => {
             <div className="flex items-center gap-6 mb-6 md:mb-0">
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 p-1">
                 <div className="w-full h-full rounded-2xl bg-black/40 backdrop-blur-sm flex items-center justify-center">
-                  {user?.profilePicture ? (
+                  {previewImage ? (
                     <img 
-                      src={user.profilePicture} 
+                      src={previewImage} 
+                      alt={profileData.name} 
+                      className="w-full h-full rounded-2xl object-cover"
+                    />
+                  ) : user?.profilePicture ? (
+                    <img 
+                      src={user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`} 
                       alt={profileData.name} 
                       className="w-full h-full rounded-2xl object-cover"
                     />
@@ -179,11 +239,15 @@ const Profile = () => {
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                 <h3 className="text-lg font-robert-medium text-white mb-4">Skills</h3>
                 <div className="flex flex-wrap gap-2">
-                  {profileData.skills.map((skill) => (
-                    <span key={skill} className="px-3 py-1 rounded-lg bg-white/5 text-white/80 text-sm font-robert-regular">
-                      {skill}
-                    </span>
-                  ))}
+                  {profileData.skills && profileData.skills.length > 0 ? (
+                    profileData.skills.map((skill, index) => (
+                      <span key={index} className="px-3 py-1 rounded-lg bg-white/5 text-white/80 text-sm font-robert-regular">
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-white/60 text-sm">No skills added yet</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -228,6 +292,45 @@ const Profile = () => {
             )}
             
             <div className="space-y-4">
+              {/* Profile Picture Upload */}
+              <div>
+                <label className="block text-white/80 font-robert-medium mb-2">Profile Picture</label>
+                <div className="flex items-center gap-4">
+                  <div 
+                    onClick={handleImageClick}
+                    className="w-24 h-24 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 p-1 cursor-pointer hover:from-purple-600 hover:to-blue-600 transition-all"
+                  >
+                    <div className="w-full h-full rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center relative">
+                      {previewImage ? (
+                        <img 
+                          src={previewImage} 
+                          alt="Profile Preview" 
+                          className="w-full h-full rounded-xl object-cover"
+                        />
+                      ) : (
+                        <span className="text-3xl text-white font-bold">
+                          {profileData.name.charAt(0)}
+                        </span>
+                      )}
+                      <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <span className="text-white text-xs font-robert-medium">Change</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-white/60 text-sm">
+                    <p>Click to upload a new profile picture</p>
+                    <p className="mt-1">Recommended: Square image, max 5MB</p>
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                </div>
+              </div>
+              
               <div>
                 <label className="block text-white/80 font-robert-medium mb-2">Name</label>
                 <input
@@ -265,11 +368,13 @@ const Profile = () => {
                 <label className="block text-white/80 font-robert-medium mb-2">Skills (comma-separated)</label>
                 <input
                   type="text"
-                  value={profileData.skills.join(', ')}
+                  value={profileData.skills ? profileData.skills.join(', ') : ''}
                   onChange={handleSkillsChange}
                   className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
+                  placeholder="e.g. React, Node.js, Frontend Development, UI/UX"
                   disabled={isUpdating}
                 />
+                <p className="mt-1 text-white/50 text-xs">Separate skills with commas. Spaces within skill names are preserved.</p>
               </div>
             </div>
             <div className="flex justify-end gap-4 mt-8">
