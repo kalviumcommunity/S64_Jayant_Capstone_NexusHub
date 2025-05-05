@@ -107,7 +107,20 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.put('/auth/profile', profileData);
+      // Check if profileData contains a file
+      let response;
+      
+      if (profileData instanceof FormData) {
+        // If FormData is passed, use it directly
+        response = await api.put('/auth/profile', profileData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } else {
+        // Regular JSON data
+        response = await api.put('/auth/profile', profileData);
+      }
       
       // Update stored user data
       localStorage.setItem('user', JSON.stringify(response.data.user));

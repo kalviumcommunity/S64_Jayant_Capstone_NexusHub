@@ -11,6 +11,7 @@ const {
   resetPassword
 } = require("../controllers/userController");
 const protect = require("../middleware/protectMiddleware");
+const { upload } = require("../utils/fileUpload");
 
 // Public routes
 router.post("/register", register);
@@ -21,7 +22,7 @@ router.get("/verify-email/:token", verifyEmail);
 
 // Protected routes
 router.get("/profile", protect, getProfile);
-router.put("/profile", protect, updateProfile);
+router.put("/profile", protect, upload.single('profilePicture'), updateProfile);
 router.delete("/account", protect, deleteAccount);
 
 module.exports = router;
