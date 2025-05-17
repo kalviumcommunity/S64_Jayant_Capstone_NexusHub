@@ -59,6 +59,22 @@ const projectSchema = new mongoose.Schema({
     min: 0,
     max: 100,
     default: 0
+  },
+  teamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Team"
+  },
+  isPersonal: {
+    type: Boolean,
+    default: false
+  },
+  completedTasks: {
+    type: Number,
+    default: 0
+  },
+  totalTasks: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

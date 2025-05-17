@@ -1,10 +1,11 @@
 const Project = require('../models/projectModel');
 const Task = require('../models/taskModel');
+const { logActivity } = require('./activityController');
 
 // Create new project
 const createProject = async (req, res) => {
   try {
-    const { title, description, team = [], startDate, dueDate, tags } = req.body;
+    const { title, description, team = [], startDate, dueDate, tags, teamId, isPersonal } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({
@@ -12,26 +13,114 @@ const createProject = async (req, res) => {
         message: 'Title and description are required'
       });
     }
-
-    const project = await Project.create({
-      title,
-      description,
-      createdBy: req.user._id,
-      team: [{ user: req.user._id, role: 'owner' }, ...team],
-      startDate,
-      dueDate,
-      tags
-    });
-
-    await project.populate([
-      { path: 'team.user', select: 'name email profilePicture' },
-      { path: 'createdBy', select: 'name email profilePicture' }
-    ]);
-
-    res.status(201).json({
-      success: true,
-      project
-    });
+    
+    // If teamId is provided and it's not a personal project, verify user has permission to create projects for this team
+    if (teamId && !isPersonal) {
+      const Team = require('../models/teamModel');
+      const team = await Team.findById(teamId);
+      
+      if (!team) {
+        return res.status(404).json({
+          success: false,
+          message: 'Team not found'
+        });
+      }
+      
+      // Check if user is owner of the team
+      const isOwner = team.owner.toString() === req.user._id.toString();
+      const isAdmin = team.members.some(member => 
+        member.user.toString() === req.user._id.toString() && member.role === 'admin'
+      );
+      
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: 'Only team owners and admins can create projects for this team'
+        });
+      }
+      
+      // Get team members to add to project
+      const teamMembers = team.members.map(member => ({
+        user: member.user,
+        role: member.role === 'owner' ? 'owner' : 
+              member.role === 'admin' ? 'admin' : 'member'
+      }));
+      
+      // Create the project with team members
+      const project = await Project.create({
+        title,
+        description,
+        createdBy: req.user._id,
+        team: teamMembers,
+        startDate,
+        dueDate,
+        tags,
+        teamId, // Store reference to the team
+        isPersonal: false,
+        progress: 0,
+        totalTasks: 0,
+        completedTasks: 0
+      });
+      
+      await project.populate([
+        { path: 'team.user', select: 'name email profilePicture' },
+        { path: 'createdBy', select: 'name email profilePicture' }
+      ]);
+      
+      // Add this project to the team's projects array
+      team.projects.push(project._id);
+      await team.save();
+      
+      // Log activity
+      await logActivity(
+        req.user._id,
+        project._id,
+        'created',
+        'project',
+        project._id,
+        `${req.user.name} created a new team project: ${project.title}`
+      );
+      
+      res.status(201).json({
+        success: true,
+        project
+      });
+    } else {
+      // Create a personal project (not associated with a team)
+      const project = await Project.create({
+        title,
+        description,
+        createdBy: req.user._id,
+        team: [{ user: req.user._id, role: 'owner' }, ...team],
+        startDate,
+        dueDate,
+        tags,
+        isPersonal: true,
+        progress: 0,
+        totalTasks: 0,
+        completedTasks: 0
+      });
+      
+      await project.populate([
+        { path: 'team.user', select: 'name email profilePicture' },
+        { path: 'createdBy', select: 'name email profilePicture' }
+      ]);
+      
+      // Log activity
+      await logActivity(
+        req.user._id,
+        project._id,
+        'created',
+        'project',
+        project._id,
+        `${req.user.name} created a new personal project: ${project.title}`
+      );
+      
+      res.status(201).json({
+        success: true,
+        project
+      });
+    }
   } catch (error) {
     console.error('Create project error:', error);
     res.status(500).json({
@@ -91,14 +180,45 @@ const getProject = async (req, res) => {
       });
     }
 
-    const hasAccess = project.team.some(member => 
-      member.user._id.toString() === req.user._id.toString()
+    // Check if user is part of the project team
+    const hasDirectAccess = project.team.some(member => 
+      member.user._id && member.user._id.toString() === req.user._id.toString()
     );
 
-    if (!hasAccess) {
+    // Check if user is the creator of the project
+    const isCreator = project.createdBy && 
+                     project.createdBy._id && 
+                     project.createdBy._id.toString() === req.user._id.toString();
+
+    // Check if project belongs to a team and user is part of that team
+    let hasTeamAccess = false;
+    if (project.teamId) {
+      try {
+        const Team = require('../models/teamModel');
+        const team = await Team.findById(project.teamId);
+        
+        if (team) {
+          // Check if user is team owner
+          const isTeamOwner = team.owner && team.owner.toString() === req.user._id.toString();
+          
+          // Check if user is team member
+          const isTeamMember = team.members && team.members.some(
+            member => member.user && member.user.toString() === req.user._id.toString()
+          );
+          
+          hasTeamAccess = isTeamOwner || isTeamMember;
+        }
+      } catch (teamError) {
+        console.error('Error checking team access:', teamError);
+        // Continue with other access checks
+      }
+    }
+
+    // Grant access if user has direct access, is creator, or has team access
+    if (!hasDirectAccess && !isCreator && !hasTeamAccess) {
       return res.status(403).json({
         success: false,
-        message: 'Access denied'
+        message: 'Access denied. You do not have permission to view this project.'
       });
     }
 

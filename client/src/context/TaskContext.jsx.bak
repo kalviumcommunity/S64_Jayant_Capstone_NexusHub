@@ -1,0 +1,736 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../utils/api.js';
+import { useAuth } from './AuthContext.jsx';
+
+// Create the task context
+const TaskContext = createContext();
+
+// Custom hook to use the task context
+export const useTask = () => useContext(TaskContext);
+
+export const TaskProvider = ({ children }) => {
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentProject, setCurrentProject] = useState(null);
+  const [userRoles, setUserRoles] = useState({});
+
+  // Fetch user's teams
+  const fetchTeams = async () => {
+    try {
+      // Use the my-teams endpoint to get teams the user is part of
+      const response = await api.get('/teams/my-teams');
+      
+      // Combine owned and member teams
+      const allTeams = [
+        ...(response.data.data?.owned || []),
+        ...(response.data.data?.member || [])
+      ];
+      
+      setTeams(allTeams);
+      
+      // Build a map of user roles in each team
+      const roles = {};
+      
+      // For owned teams, user is the owner
+      if (response.data.data?.owned) {
+        response.data.data.owned.forEach(team => {
+          roles[team._id] = 'owner';
+        });
+      }
+      
+      // For member teams, get the role from the members array
+      if (response.data.data?.member) {
+        response.data.data.member.forEach(team => {
+          const userMember = team.members.find(
+            member => member.user._id === user._id || 
+                     (member.user && member.user._id === user._id)
+          );
+          if (userMember) {
+            roles[team._id] = userMember.role;
+          }
+        });
+      }
+      
+      setUserRoles(roles);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+      setError('Failed to load teams');
+      // Set empty arrays to prevent further errors
+      setTeams([]);
+    }
+  };
+
+  // Fetch user's projects
+  const fetchProjects = async () => {
+    try {
+      const response = await api.get('/projects');
+      
+      // Check the structure of the response
+      if (response.data && Array.isArray(response.data.projects)) {
+        setProjects(response.data.projects);
+      } else if (response.data && Array.isArray(response.data.data)) {
+        // Alternative structure
+        setProjects(response.data.data);
+      } else if (response.data && response.data.success) {
+        // Another possible structure
+        setProjects(response.data.data || []);
+      } else {
+        // Fallback
+        console.warn('Unexpected project data structure:', response.data);
+        setProjects([]);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      setError('Failed to load projects');
+      // Set empty array to prevent further errors
+      setProjects([]);
+    }
+  };
+
+  // Fetch tasks for a specific project
+  const fetchProjectTasks = async (projectId) => {
+    if (!projectId) {
+      console.warn('No project ID provided to fetchProjectTasks');
+      return [];
+    }
+    
+    setLoading(true);
+    try {
+      const response = await api.get(`/tasks/project/${projectId}`);
+      
+      // Handle different response structures
+      let taskData = [];
+      if (response.data && Array.isArray(response.data.tasks)) {
+        taskData = response.data.tasks;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        taskData = response.data.data;
+      } else if (response.data && response.data.success && Array.isArray(response.data.data)) {
+        taskData = response.data.data;
+      } else {
+        console.warn('Unexpected task data structure:', response.data);
+      }
+      
+      setTasks(taskData);
+      setCurrentProject(projectId);
+      return taskData;
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      setError('Failed to load tasks');
+      setTasks([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create a new task
+  const createTask = async (projectId, taskData) => {
+    if (!projectId) {
+      const error = new Error('No project ID provided to createTask');
+      console.error(error);
+      setError('Failed to create task: No project ID provided');
+      throw error;
+    }
+    
+    try {
+      const response = await api.post(`/tasks/project/${projectId}`, taskData);
+      
+      // Handle different response structures
+      let newTask = null;
+      if (response.data && response.data.task) {
+        newTask = response.data.task;
+      } else if (response.data && response.data.data) {
+        newTask = response.data.data;
+      } else if (response.data && response.data.success) {
+        newTask = response.data.data || response.data;
+      } else {
+        console.warn('Unexpected task creation response structure:', response.data);
+        newTask = response.data;
+      }
+      
+      setTasks(prevTasks => [...prevTasks, newTask]);
+      return newTask;
+    } catch (error) {
+      console.error('Error creating task:', error);
+      setError(error.response?.data?.message || 'Failed to create task');
+      throw error;
+    }
+  };
+
+  // Update a task
+  const updateTask = async (taskId, taskData) => {
+    if (!taskId) {
+      const error = new Error('No task ID provided to updateTask');
+      console.error(error);
+      setError('Failed to update task: No task ID provided');
+      throw error;
+    }
+    
+    try {
+      const response = await api.put(`/tasks/${taskId}`, taskData);
+      
+      // Handle different response structures
+      let updatedTask = null;
+      if (response.data && response.data.task) {
+        updatedTask = response.data.task;
+      } else if (response.data && response.data.data) {
+        updatedTask = response.data.data;
+      } else if (response.data && response.data.success) {
+        updatedTask = response.data.data || response.data;
+      } else {
+        console.warn('Unexpected task update response structure:', response.data);
+        updatedTask = response.data;
+      }
+      
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task._id === taskId ? updatedTask : task
+        )
+      );
+      return updatedTask;
+    } catch (error) {
+      console.error('Error updating task:', error);
+      setError(error.response?.data?.message || 'Failed to update task');
+      throw error;
+    }
+  };
+
+  // Delete a task
+  const deleteTask = async (taskId) => {
+    if (!taskId) {
+      const error = new Error('No task ID provided to deleteTask');
+      console.error(error);
+      setError('Failed to delete task: No task ID provided');
+      throw error;
+    }
+    
+    try {
+      await api.delete(`/tasks/${taskId}`);
+      setTasks(prevTasks => prevTasks.filter(task => task._id !== taskId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setError(error.response?.data?.message || 'Failed to delete task');
+      throw error;
+    }
+  };
+
+  // Check if user can edit a task
+  const canEditTask = (task) => {
+    if (!task || !user) return false;
+    
+    try {
+      // User is the creator of the task
+      if (task.createdBy && task.createdBy._id === user._id) return true;
+      
+      // Check project role
+      if (task.project) {
+        const project = projects.find(p => p._id === task.project);
+        if (project && project.team) {
+          // Handle different team structures
+          const teamMembers = Array.isArray(project.team) ? project.team : [];
+          
+          // Find the user's role in the team
+          const userMember = teamMembers.find(member => {
+            const memberId = member.user?._id || member.user;
+            return memberId === user._id;
+          });
+          
+          if (userMember && ['owner', 'admin'].includes(userMember.role)) {
+            return true;
+          }
+        }
+      }
+      
+      // Check team roles from userRoles
+      if (task.team && userRoles[task.team]) {
+        const role = userRoles[task.team];
+        if (['owner', 'admin'].includes(role)) {
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error('Error in canEditTask:', error);
+    }
+    
+    return false;
+  };
+
+  // Check if user can manage a task (update status)
+  const canManageTask = (task) => {
+    if (!task || !user) return false;
+    
+    try {
+      // User is assigned to the task
+      if (task.assignedTo && Array.isArray(task.assignedTo)) {
+        const isAssigned = task.assignedTo.some(assignee => {
+          const assigneeId = assignee._id || assignee;
+          return assigneeId === user._id;
+        });
+        
+        if (isAssigned) return true;
+      }
+      
+      // User can edit the task
+      if (canEditTask(task)) return true;
+    } catch (error) {
+      console.error('Error in canManageTask:', error);
+    }
+    
+    return false;
+  };
+
+  // Load initial data
+  useEffect(() => {
+    if (user) {
+      const loadInitialData = async () => {
+        setLoading(true);
+        try {
+          await Promise.all([fetchTeams(), fetchProjects()]);
+        } catch (error) {
+          console.error('Error loading initial data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadInitialData();
+    } else {
+      // Reset state when user logs out
+      setTasks([]);
+      setProjects([]);
+      setTeams([]);
+      setCurrentProject(null);
+      setUserRoles({});
+    }
+    // We're intentionally only running this when the user changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Context value
+  const value = {
+    tasks,
+    projects,
+    teams,
+    loading,
+    error,
+    currentProject,
+    userRoles,
+    fetchProjectTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    canEditTask,
+    canManageTask,
+    setCurrentProject
+  };
+
+  return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
+};
+
+export default TaskContext;import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../utils/api.js';
+import { useAuth } from './AuthContext.jsx';
+
+// Create the task context
+const TaskContext = createContext();
+
+// Custom hook to use the task context
+export const useTask = () => useContext(TaskContext);
+
+export const TaskProvider = ({ children }) => {
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentProject, setCurrentProject] = useState(null);
+  const [userRoles, setUserRoles] = useState({});
+
+  // Fetch user's teams
+  const fetchTeams = async () => {
+    try {
+      // Use the my-teams endpoint to get teams the user is part of
+      const response = await api.get('/teams/my-teams');
+      
+      // Combine owned and member teams
+      const allTeams = [
+        ...(response.data.data?.owned || []),
+        ...(response.data.data?.member || [])
+      ];
+      
+      setTeams(allTeams);
+      
+      // Build a map of user roles in each team
+      const roles = {};
+      
+      // For owned teams, user is the owner
+      if (response.data.data?.owned) {
+        response.data.data.owned.forEach(team => {
+          roles[team._id] = 'owner';
+        });
+      }
+      
+      // For member teams, get the role from the members array
+      if (response.data.data?.member) {
+        response.data.data.member.forEach(team => {
+          const userMember = team.members.find(
+            member => member.user._id === user._id || 
+                     (member.user && member.user._id === user._id)
+          );
+          if (userMember) {
+            roles[team._id] = userMember.role;
+          }
+        });
+      }
+      
+      setUserRoles(roles);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+      setError('Failed to load teams');
+      // Set empty arrays to prevent further errors
+      setTeams([]);
+    }
+  };
+
+  // Fetch user's projects
+  const fetchProjects = async () => {
+    try {
+      const response = await api.get('/projects');
+      
+      // Check the structure of the response
+      if (response.data && Array.isArray(response.data.projects)) {
+        setProjects(response.data.projects);
+      } else if (response.data && Array.isArray(response.data.data)) {
+        // Alternative structure
+        setProjects(response.data.data);
+      } else if (response.data && response.data.success) {
+        // Another possible structure
+        setProjects(response.data.data || []);
+      } else {
+        // Fallback
+        console.warn('Unexpected project data structure:', response.data);
+        setProjects([]);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      setError('Failed to load projects');
+      // Set empty array to prevent further errors
+      setProjects([]);
+    }
+  };
+
+  // Fetch tasks for a specific project
+  const fetchProjectTasks = async (projectId) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/tasks/project/${projectId}`);
+      setTasks(response.data.tasks);
+      setCurrentProject(projectId);
+      return response.data.tasks;
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      setError('Failed to load tasks');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create a new task
+  const createTask = async (projectId, taskData) => {
+    try {
+      const response = await api.post(`/tasks/project/${projectId}`, taskData);
+      setTasks(prevTasks => [...prevTasks, response.data.task]);
+      return response.data.task;
+    } catch (error) {
+      console.error('Error creating task:', error);
+      setError(error.response?.data?.message || 'Failed to create task');
+      throw error;
+    }
+  };
+
+  // Update a task
+  const updateTask = async (taskId, taskData) => {
+    try {
+      const response = await api.put(`/tasks/${taskId}`, taskData);
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task._id === taskId ? response.data.task : task
+        )
+      );
+      return response.data.task;
+    } catch (error) {
+      console.error('Error updating task:', error);
+      setError(error.response?.data?.message || 'Failed to update task');
+      throw error;
+    }
+  };
+
+  // Delete a task
+  const deleteTask = async (taskId) => {
+    try {
+      await api.delete(`/tasks/${taskId}`);
+      setTasks(prevTasks => prevTasks.filter(task => task._id !== taskId));
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setError(error.response?.data?.message || 'Failed to delete task');
+      throw error;
+    }
+  };
+
+  // Check if user can edit a task
+  const canEditTask = (task) => {
+    if (!task || !user) return false;
+    
+    // User is the creator of the task
+    if (task.createdBy._id === user._id) return true;
+    
+    // Check project role
+    const project = projects.find(p => p._id === task.project);
+    if (project) {
+      const userRole = project.team.find(member => member.user._id === user._id)?.role;
+      if (userRole && ['owner', 'admin'].includes(userRole)) return true;
+    }
+    
+    return false;
+  };
+
+  // Check if user can manage a task (update status)
+  const canManageTask = (task) => {
+    if (!task || !user) return false;
+    
+    // User is assigned to the task
+    if (task.assignedTo.some(assignee => assignee._id === user._id)) return true;
+    
+    // User can edit the task
+    if (canEditTask(task)) return true;
+    
+    return false;
+  };
+
+  // Load initial data
+  useEffect(() => {
+    if (user) {
+      const loadInitialData = async () => {
+        setLoading(true);
+        try {
+          await Promise.all([fetchTeams(), fetchProjects()]);
+        } catch (error) {
+          console.error('Error loading initial data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadInitialData();
+    }
+  }, [user]);
+
+  // Context value
+  const value = {
+    tasks,
+    projects,
+    teams,
+    loading,
+    error,
+    currentProject,
+    userRoles,
+    fetchProjectTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    canEditTask,
+    canManageTask,
+    setCurrentProject
+  };
+
+  return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
+};
+
+export default TaskContext;import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../utils/api.js';
+import { useAuth } from './AuthContext.jsx';
+
+// Create the task context
+const TaskContext = createContext();
+
+// Custom hook to use the task context
+export const useTask = () => useContext(TaskContext);
+
+export const TaskProvider = ({ children }) => {
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentProject, setCurrentProject] = useState(null);
+  const [userRoles, setUserRoles] = useState({});
+
+  // Fetch user's teams
+  const fetchTeams = async () => {
+    try {
+      const response = await api.get('/teams');
+      setTeams(response.data.teams);
+      
+      // Build a map of user roles in each team
+      const roles = {};
+      response.data.teams.forEach(team => {
+        const userMember = team.members.find(member => member.user._id === user._id);
+        if (userMember) {
+          roles[team._id] = userMember.role;
+        }
+      });
+      setUserRoles(roles);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+      setError('Failed to load teams');
+    }
+  };
+
+  // Fetch user's projects
+  const fetchProjects = async () => {
+    try {
+      const response = await api.get('/projects');
+      setProjects(response.data.projects);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      setError('Failed to load projects');
+    }
+  };
+
+  // Fetch tasks for a specific project
+  const fetchProjectTasks = async (projectId) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/tasks/project/${projectId}`);
+      setTasks(response.data.tasks);
+      setCurrentProject(projectId);
+      return response.data.tasks;
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      setError('Failed to load tasks');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create a new task
+  const createTask = async (projectId, taskData) => {
+    try {
+      const response = await api.post(`/tasks/project/${projectId}`, taskData);
+      setTasks(prevTasks => [...prevTasks, response.data.task]);
+      return response.data.task;
+    } catch (error) {
+      console.error('Error creating task:', error);
+      setError(error.response?.data?.message || 'Failed to create task');
+      throw error;
+    }
+  };
+
+  // Update a task
+  const updateTask = async (taskId, taskData) => {
+    try {
+      const response = await api.put(`/tasks/${taskId}`, taskData);
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task._id === taskId ? response.data.task : task
+        )
+      );
+      return response.data.task;
+    } catch (error) {
+      console.error('Error updating task:', error);
+      setError(error.response?.data?.message || 'Failed to update task');
+      throw error;
+    }
+  };
+
+  // Delete a task
+  const deleteTask = async (taskId) => {
+    try {
+      await api.delete(`/tasks/${taskId}`);
+      setTasks(prevTasks => prevTasks.filter(task => task._id !== taskId));
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setError(error.response?.data?.message || 'Failed to delete task');
+      throw error;
+    }
+  };
+
+  // Check if user can edit a task
+  const canEditTask = (task) => {
+    if (!task || !user) return false;
+    
+    // User is the creator of the task
+    if (task.createdBy._id === user._id) return true;
+    
+    // Check project role
+    const project = projects.find(p => p._id === task.project);
+    if (project) {
+      const userRole = project.team.find(member => member.user._id === user._id)?.role;
+      if (userRole && ['owner', 'admin'].includes(userRole)) return true;
+    }
+    
+    return false;
+  };
+
+  // Check if user can manage a task (update status)
+  const canManageTask = (task) => {
+    if (!task || !user) return false;
+    
+    // User is assigned to the task
+    if (task.assignedTo.some(assignee => assignee._id === user._id)) return true;
+    
+    // User can edit the task
+    if (canEditTask(task)) return true;
+    
+    return false;
+  };
+
+  // Load initial data
+  useEffect(() => {
+    if (user) {
+      const loadInitialData = async () => {
+        setLoading(true);
+        try {
+          await Promise.all([fetchTeams(), fetchProjects()]);
+        } catch (error) {
+          console.error('Error loading initial data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadInitialData();
+    }
+  }, [user]);
+
+  // Context value
+  const value = {
+    tasks,
+    projects,
+    teams,
+    loading,
+    error,
+    currentProject,
+    userRoles,
+    fetchProjectTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    canEditTask,
+    canManageTask,
+    setCurrentProject
+  };
+
+  return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
+};
+
+export default TaskContext;

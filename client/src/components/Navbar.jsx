@@ -4,16 +4,23 @@ import { useWindowScroll } from "react-use";
 import { useEffect, useRef, useState } from "react";
 import { TiLocationArrow } from "react-icons/ti";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { initializeTransitions } from "../utils/transitions";
+import { pageTransition } from "../utils/pageTransitions";
 import { useAuth } from "../context/AuthContext.jsx";
 
 import Button from "./Button";
 
-const navItems = [
+// Navigation items before login
+const publicNavItems = [
   { name: "Home", type: "hash" },
   { name: "Features", type: "hash" },
   { name: "About", type: "hash" },
-  { name: "Contact", type: "hash" },
+  { name: "Contact", type: "hash" }
+];
+
+// Navigation items after login
+const privateNavItems = [
+  { name: "Feed", type: "route", path: "/feed" },
+  { name: "Dashboard", type: "route", path: "/dashboard" },
   { name: "Profile", type: "route", path: "/profile" }
 ];
 
@@ -38,21 +45,13 @@ const NavBar = () => {
 
   const handleNavClick = async (item) => {
     if (item.type === "route") {
-      const loader = document.querySelector(".loader");
-      if (loader) {
-        // Reset loader position
-        loader.style.transform = "translateX(-100%)";
-        // Force a reflow
-        loader.offsetHeight;
-        // Start transition
-        loader.style.transform = "translateX(0%)";
-        
-        // Navigate after a longer delay to match the new transition
-        setTimeout(() => {
-          navigate(item.path);
-        }, 300);
-      } else {
+      // Check if navigating to auth pages
+      if (item.path === '/login' || item.path === '/signup') {
+        // Direct navigation without transition for auth pages
         navigate(item.path);
+      } else {
+        // Use the page transition for other routes
+        pageTransition.navigate(navigate, item.path);
       }
     } else {
       // Handle hash navigation
@@ -106,19 +105,27 @@ const NavBar = () => {
       <header className="absolute top-1/2 w-full -translate-y-1/2">
         <nav className="flex size-full items-center justify-between p-4">
           <div className="flex items-center gap-7">
-            <Link to="/">
+            <a href="/" onClick={(e) => { 
+              e.preventDefault(); 
+              // Use direct navigation if coming from auth pages
+              if (isAuthPage) {
+                navigate('/');
+              } else {
+                pageTransition.navigate(navigate, '/');
+              }
+            }}>
               <img src="/img/logo.png" alt="logo" className="w-10" />
-            </Link>
+            </a>
 
             {!isAuthPage && !isAuthenticated && (
-              <Link to="/login">
+              <a href="/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>
                 <Button
                   id="login-button"
                   title="LOGIN"
                   rightIcon={<TiLocationArrow />}
                   containerClass="bg-blue-50 md:flex hidden items-center justify-center gap-1"
                 />
-              </Link>
+              </a>
             )}
             
             {isAuthenticated && (
@@ -135,22 +142,15 @@ const NavBar = () => {
             {!isAuthPage && (
               <>
                 <div className="hidden md:block">
-                  {navItems.map((item, index) => {
-                    // Skip Profile link if not authenticated
-                    if (item.name === "Profile" && !isAuthenticated) {
-                      return null;
-                    }
-                    
-                    return (
-                      <button
-                        key={index}
-                        onClick={() => handleNavClick(item)}
-                        className="nav-hover-btn"
-                      >
-                        {item.name}
-                      </button>
-                    );
-                  })}
+                  {(isAuthenticated ? privateNavItems : publicNavItems).map((item, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleNavClick(item)}
+                      className="nav-hover-btn"
+                    >
+                      {item.name}
+                    </button>
+                  ))}
                   
                   {isAuthenticated && (
                     <button
@@ -191,14 +191,20 @@ const NavBar = () => {
             )}
 
             {isAuthPage && (
-              <Link to={location.pathname === '/login' ? '/signup' : '/login'}>
+              <a 
+                href={location.pathname === '/login' ? '/signup' : '/login'} 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  navigate(location.pathname === '/login' ? '/signup' : '/login'); 
+                }}
+              >
                 <Button
                   id="auth-switch-button"
                   title={location.pathname === '/login' ? 'SIGN UP' : 'LOGIN'}
                   rightIcon={<TiLocationArrow />}
                   containerClass="bg-blue-50 md:flex hidden items-center justify-center gap-1"
                 />
-              </Link>
+              </a>
             )}
           </div>
         </nav>

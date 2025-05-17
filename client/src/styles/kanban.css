@@ -1,0 +1,128 @@
+/* Kanban Board Styles */
+
+/* Container styling */
+.kanban-container {
+  min-height: 500px;
+  overflow-y: visible;
+}
+
+/* Scrollbar styling for the kanban board */
+.kanban-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.kanban-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.kanban-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.kanban-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Card hover effects */
+.kanban-card {
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.kanban-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Drag indicator animation */
+.drop-indicator {
+  transition: opacity 0.2s ease;
+}
+
+/* Column hover effect */
+.kanban-column {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.kanban-column:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Add task button animation */
+.add-task-btn {
+  transition: all 0.3s ease;
+}
+
+.add-task-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Burn barrel animation */
+.burn-barrel {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.burn-barrel:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: rgb(239, 68, 68);
+}
+
+/* Additional hover effects for the burn barrel */
+@keyframes subtle-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+  }
+}
+
+/* Bounce animation for the fire icon */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+/* Task priority badges */
+.priority-high {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: rgb(252, 165, 165);
+}
+
+.priority-medium {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: rgb(252, 211, 77);
+}
+
+.priority-low {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: rgb(110, 231, 183);
+}
+
+/* Card drag animation */
+.card-dragging {
+  opacity: 0.7;
+  transform: scale(1.05);
+  z-index: 100;
+}
+
+/* Column active state when dragging */
+.column-active {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}

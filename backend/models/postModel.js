@@ -80,6 +80,10 @@ const postSchema = new mongoose.Schema({
   isEdited: {
     type: Boolean,
     default: false
+  },
+  sharedPost: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Post"
   }
 }, {
   timestamps: true

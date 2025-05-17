@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { gsap } from 'gsap';
 import { TiLocationArrow } from "react-icons/ti";
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -32,63 +31,45 @@ const Login = () => {
   }, [isAuthenticated, navigate]);
 
   useEffect(() => {
-    // Initial animation timeline
-    const tl = gsap.timeline();
-
+    // No need for manual transition handling or animations
+    
     // Start with the intro video
     if (introVideoRef.current) {
       introVideoRef.current.play();
       
       // Listen for video end
       introVideoRef.current.addEventListener('ended', () => {
-        // Fade out intro video
-        tl.to(introVideoRef.current, {
-          opacity: 0,
-          duration: 1,
-          ease: 'power2.inOut',
-          onComplete: () => {
-            setShowLoginForm(true);
+        // Immediately show login form without animation
+        setShowLoginForm(true);
+        
+        // Set intro video opacity to 0
+        if (introVideoRef.current) {
+          introVideoRef.current.style.opacity = 0;
+        }
 
-            // Play background video
-            if (bgVideoRef.current) {
-              bgVideoRef.current.play();
-            }
-          }
-        });
+        // Play background video
+        if (bgVideoRef.current) {
+          bgVideoRef.current.play();
+        }
       });
     }
   }, []);
 
-  // Animation for login form entry for better view of the page
+  // No animation for login form entry
   useEffect(() => {
+    // Simply ensure elements are visible without animations
     if (showLoginForm) {
       if (formContainerRef.current) {
-        gsap.from(formContainerRef.current, {
-          opacity: 0,
-          x: -50,
-          duration: 1,
-          ease: 'power3.out'
-        });
+        formContainerRef.current.style.opacity = 1;
       }
-
+      
       if (contentRef.current) {
-        gsap.from(contentRef.current, {
-          opacity: 0,
-          x: 50,
-          duration: 1,
-          ease: 'power3.out',
-          delay: 0.3
-        });
+        contentRef.current.style.opacity = 1;
       }
-
-      // Animate form elements
-      gsap.from('.form-element', {
-        opacity: 0,
-        y: 20,
-        duration: 0.8,
-        stagger: 0.15,
-        ease: 'power2.out',
-        delay: 0.5
+      
+      // Make sure form elements are visible
+      document.querySelectorAll('.form-element').forEach(el => {
+        el.style.opacity = 1;
       });
     }
   }, [showLoginForm]);
@@ -119,7 +100,8 @@ const Login = () => {
     
     try {
       await login(formData);
-      // Successful login will trigger the useEffect above to redirect
+      // Navigate directly without transition
+      navigate('/dashboard');
     } catch (err) {
       setLoginError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {

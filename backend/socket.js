@@ -40,6 +40,9 @@ const initializeSocket = (server) => {
     // Join personal room
     socket.join(socket.user._id.toString());
 
+    // Join feed room for real-time updates
+    socket.join('feed');
+
     // Online status
     socket.broadcast.emit('user_online', socket.user._id);
 
@@ -74,6 +77,17 @@ const initializeSocket = (server) => {
         chatId,
         userId: socket.user._id
       });
+    });
+
+    // Post interactions
+    socket.on('like_post', (postId) => {
+      // This will be handled by the controller, but we can use this for additional logic
+      console.log(`User ${socket.user.name} liked post: ${postId}`);
+    });
+
+    socket.on('comment_post', (postId) => {
+      // This will be handled by the controller, but we can use this for additional logic
+      console.log(`User ${socket.user.name} commented on post: ${postId}`);
     });
 
     // Disconnect

@@ -1,0 +1,96 @@
+/* pageTransitions.css */
+.transition-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.1); /* Slight background to make container visible */
+}
+
+.inner {
+  background-color: black;
+}
+
+.inner .page {
+  background-color: white;
+}
+
+.inner .slide {
+  height: 100vh;
+  width: 100%;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background-color: #6366f1; /* Changed to a visible color */
+  z-index: 1;
+}
+
+/* Slide animation */
+.transition-slide-enter {
+  transform: translateY(100vh);
+  opacity: 1;
+  background-color: #6366f1 !important; /* Bright color for visibility */
+}
+.transition-slide-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  background-color: #6366f1 !important;
+  transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.transition-slide-exit {
+  transform: translateY(0);
+  opacity: 1;
+  background-color: #6366f1 !important;
+}
+.transition-slide-exit-active {
+  transform: translateY(100vh);
+  opacity: 1;
+  background-color: #6366f1 !important;
+  transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* Opacity fade in/out */
+.transition-opacity-enter {
+  opacity: 0;
+  background-color: rgba(99, 102, 241, 0.8) !important; /* Bright color for visibility */
+}
+.transition-opacity-enter-active {
+  opacity: 1;
+  background-color: rgba(99, 102, 241, 0.8) !important;
+  transition: opacity 0.8s ease-in;
+}
+.transition-opacity-exit {
+  opacity: 1;
+  background-color: rgba(99, 102, 241, 0.8) !important;
+}
+.transition-opacity-exit-active {
+  opacity: 0;
+  background-color: rgba(99, 102, 241, 0.8) !important;
+  transition: opacity 0.8s ease-out;
+}
+
+/* Perspective-like scale + fade effect */
+.transition-perspective-enter {
+  transform: scale(1) translateY(0);
+  opacity: 0;
+  background-color: rgba(139, 92, 246, 0.8) !important; /* Purple color for visibility */
+}
+.transition-perspective-enter-active {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  background-color: rgba(139, 92, 246, 0.8) !important;
+  transition: transform 1.2s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.8s ease-in;
+}
+.transition-perspective-exit {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  background-color: rgba(139, 92, 246, 0.8) !important;
+}
+.transition-perspective-exit-active {
+  transform: scale(0.9) translateY(-150px);
+  opacity: 0.5;
+  background-color: rgba(139, 92, 246, 0.8) !important;
+  transition: transform 1.2s cubic-bezier(0.76, 0, 0.24, 1), opacity 0.8s ease-out;
+}

@@ -1,58 +1,38 @@
-export const initializeTransitions = () => {
-  const root = document.documentElement;
-  
-  const endTransition = () => {
-    const loader = document.querySelector(".loader");
-    if (!loader) return;
-    
-    const handleTransitionEnd = () => {
-      loader.style.transform = "translateX(100%)";
-      root.classList.remove("disable-hover");
-      loader.removeEventListener("transitionend", handleTransitionEnd);
-    };
+/**
+ * Simplified loader system
+ * - Maintains the three-dot loader effect
+ * - Removes page transitions
+ */
 
-    loader.addEventListener("transitionend", handleTransitionEnd);
-    loader.style.transform = "";
-  };
-
-  const startTransition = (route) => {
-    const pageRoot = document.getElementById("page-root");
-    if (!pageRoot) return;
-    
-    const loader = document.querySelector(".loader");
-    if (!loader) return;
-    
-    loader.style.transform = "translateX(100%)";
-    pageRoot.dataset.route = route;
-    root.classList.remove("disable-hover");
-  };
-
-  const onRouteChange = (route) => {
-    const pageRoot = document.getElementById("page-root");
-    if (!pageRoot || pageRoot.dataset.route === route) return;
-    
-    root.classList.add("disable-hover");
-    pageRoot.dataset.route = route;
-    
-    // Force a reflow to ensure the transition runs
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        endTransition();
-      });
-    });
-  };
-
-  // Initialize on page load
-  window.addEventListener("load", () => {
-    const currentRoute = window.location.pathname.split('/')[1] || 'home';
-    startTransition(currentRoute);
-  });
-
-  return { onRouteChange };
-}; 
-
-
-// Create a new function for handling page transition
-export const handlePageTransition = () => {
-  initializeTransitions(); // Call the existing transition logic
+// Initialize the loader system
+export const initializeLoader = () => {
+  // Only create the loader once
+  if (!document.querySelector(".loader")) {
+    const loader = document.createElement("div");
+    loader.className = "loader";
+    loader.style.transform = "translateX(100%)"; // Start off-screen
+    document.body.appendChild(loader);
+  }
 };
+
+// Utility functions for loader control
+export const loaderControl = {
+  // Hide the loader (move it off-screen)
+  hideLoader: () => {
+    const loader = document.querySelector(".loader");
+    if (loader) {
+      loader.style.transform = "translateX(100%)";
+    }
+  },
+  
+  // Simple navigation without transitions
+  navigate: (navigateFunction, path) => {
+    // Just navigate directly without transitions
+    navigateFunction(path);
+  }
+};
+
+// For backward compatibility
+export const pageTransition = loaderControl;
+export const initializeTransitions = initializeLoader;
+export const handlePageTransition = initializeLoader;

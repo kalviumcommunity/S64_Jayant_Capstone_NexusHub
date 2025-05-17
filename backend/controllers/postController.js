@@ -5,16 +5,49 @@ const { getIO } = require('../socket');
 // Create post
 exports.createPost = async (req, res) => {
   try {
-    const { content, media, tags, visibility, project, location } = req.body;
+    const { content, tags, visibility, project, location } = req.body;
+    
+    // Process uploaded files
+    const mediaFiles = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        // Determine file type
+        let fileType = 'document';
+        if (file.mimetype.startsWith('image/')) {
+          fileType = 'image';
+        } else if (file.mimetype.startsWith('video/')) {
+          fileType = 'video';
+        }
+        
+        // Create media object
+        mediaFiles.push({
+          type: fileType,
+          url: `/uploads/${file.filename}`,
+          name: file.originalname,
+          size: file.size
+        });
+      }
+    }
+
+    // Parse tags if they come as a string
+    let parsedTags = tags || [];
+    if (typeof tags === 'string') {
+      try {
+        parsedTags = JSON.parse(tags);
+      } catch (e) {
+        // If not valid JSON, split by comma
+        parsedTags = tags.split(',').map(tag => tag.trim());
+      }
+    }
 
     const post = await Post.create({
       author: req.user._id,
       content,
-      media: media || [],
-      tags: tags || [],
-      visibility,
-      project,
-      location
+      media: mediaFiles,
+      tags: parsedTags,
+      visibility: visibility || 'public',
+      project: project || null,
+      location: location || null
     });
 
     await post.populate('author', 'name email profilePicture');
@@ -30,6 +63,7 @@ exports.createPost = async (req, res) => {
       post
     });
   } catch (error) {
+    console.error('Error creating post:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating post',
@@ -45,15 +79,12 @@ exports.getFeedPosts = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skipIndex = (page - 1) * limit;
 
+    // Since the user model doesn't have a connections field, we'll just show public posts
+    // and posts by the current user
     const query = {
       $or: [
         { visibility: 'public' },
-        {
-          $and: [
-            { visibility: 'connections' },
-            { author: { $in: [...req.user.connections, req.user._id] } }
-          ]
-        }
+        { author: req.user._id }
       ]
     };
 
@@ -219,6 +250,7 @@ exports.addComment = async (req, res) => {
 exports.sharePost = async (req, res) => {
   try {
     const { content } = req.body;
+    console.log('Sharing post with content:', content);
     const originalPost = await Post.findById(req.params.postId)
       .populate('author', 'name email profilePicture');
 
@@ -244,6 +276,13 @@ exports.sharePost = async (req, res) => {
     await originalPost.save();
 
     await sharedPost.populate('author', 'name email profilePicture');
+    await sharedPost.populate({
+      path: 'sharedPost',
+      populate: {
+        path: 'author',
+        select: 'name email profilePicture'
+      }
+    });
 
     // Emit share update
     getIO().emit('post_shared', {
@@ -315,12 +354,7 @@ exports.searchPosts = async (req, res) => {
         {
           $or: [
             { visibility: 'public' },
-            {
-              $and: [
-                { visibility: 'connections' },
-                { author: { $in: [...req.user.connections, req.user._id] } }
-              ]
-            }
+            { author: req.user._id }
           ]
         }
       ]

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { gsap } from 'gsap';
 import { TiLocationArrow } from "react-icons/ti";
 import Button from '../Button';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -34,20 +33,9 @@ const Signup = () => {
   }, [isAuthenticated, navigate]);
 
   useEffect(() => {
-    // Handle initial loader position with smoother transition
-    const loader = document.querySelector(".loader");
-    if (loader) {
-      // Initial position
-      loader.style.transform = "translateX(-100%)";
-      
-      // Force a reflow
-      loader.offsetHeight;
-      
-      // Smooth transition to final position
-      loader.style.transition = "transform 1.2s cubic-bezier(0.65, 0, 0.35, 1)";
-      loader.style.transform = "translateX(100%)";
-    }
-
+    // No need for manual transition handling or animations
+    // App.jsx will handle hiding the loader after route change
+  
     // Start background video
     if (bgVideoRef.current) {
       bgVideoRef.current.play();
@@ -60,14 +48,14 @@ const Signup = () => {
       mainContent.style.visibility = 'visible';
     }
 
-    // Simpler animations that won't affect visibility
-    gsap.from([formContainerRef.current, contentRef.current], {
-      y: 0,
-      opacity: 1,
-      duration: 1,
-      ease: 'power3.out',
-      stagger: 0.2
-    });
+    // Make sure form elements are visible without animations
+    if (formContainerRef.current) {
+      formContainerRef.current.style.opacity = 1;
+    }
+    
+    if (contentRef.current) {
+      contentRef.current.style.opacity = 1;
+    }
   }, []);
 
   const handleChange = (e) => {
@@ -130,7 +118,8 @@ const Signup = () => {
       };
       
       await register(registrationData);
-      // Successful registration will trigger the useEffect to redirect
+      // Navigate directly without transition
+      navigate('/dashboard');
     } catch (err) {
       setSignupError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {

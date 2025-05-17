@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,6 +31,13 @@ api.interceptors.response.use(
       // Optionally redirect to login page
       window.location.href = '/login';
     }
+    
+    // Log forbidden errors for debugging
+    if (error.response && error.response.status === 403) {
+      console.error('Access forbidden. You do not have permission to access this resource.');
+      // You can handle this differently, e.g., show a notification to the user
+    }
+    
     return Promise.reject(error);
   }
 );

@@ -7,10 +7,12 @@ const connectDB = require("./MongoDb");
 const userRoutes = require("./routes/userRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const teamRoutes = require("./routes/teamRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const postRoutes = require("./routes/postRoutes");
 const oauthRoutes = require("./routes/oauthRoutes");
+const activityRoutes = require("./routes/activityRoutes");
 const cors = require("cors");
 const { initializeSocket } = require('./socket');
 const passport = require('passport');
@@ -38,6 +40,15 @@ app.use(session({
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static('uploads'));
+// Ensure the uploads directory exists
+const fs = require('fs');
+const path = require('path');
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads', { recursive: true });
+}
+if (!fs.existsSync('uploads/profile-images')) {
+  fs.mkdirSync('uploads/profile-images', { recursive: true });
+}
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -47,9 +58,11 @@ app.use("/api/auth", userRoutes);
 app.use("/api/oauth", oauthRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/teams", teamRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/activities", activityRoutes);
 
 // Error Handling Middleware (Optional but recommended)
 app.use((err, req, res, next) => {

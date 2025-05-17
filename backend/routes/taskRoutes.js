@@ -12,6 +12,9 @@ const {
 } = require("../controllers/taskController");
 
 // Get all tasks
+router.get("/", protect, getAllTasks);
+
+// Get all tasks (alternative route)
 router.get("/tasks", protect, getAllTasks);
 
 // Get task by ID

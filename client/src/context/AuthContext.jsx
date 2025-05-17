@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/api.js';
+import { initializeSocket, disconnectSocket } from '../utils/socket.js';
 
 // Create the auth context
 const AuthContext = createContext();
@@ -36,6 +37,9 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
+          // Initialize socket connection
+          initializeSocket(token);
+          
           // Verify token by getting user profile
           const response = await api.get('/auth/profile');
           setUser(response.data.user);
@@ -82,8 +86,12 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/login', credentials);
       
       // Save token and user data
-      localStorage.setItem('token', response.data.token);
+      const token = response.data.token;
+      localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // Initialize socket connection
+      initializeSocket(token);
       
       setUser(response.data.user);
       return response.data;
@@ -97,8 +105,14 @@ export const AuthProvider = ({ children }) => {
 
   // Logout user
   const logout = () => {
+    // Disconnect socket
+    disconnectSocket();
+    
+    // Clear local storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Clear user state
     setUser(null);
   };
 

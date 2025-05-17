@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/transitions.css';
 import { useAuth } from '../context/AuthContext.jsx';
+import { pixelTransition } from '../utils/pixelTransition';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -44,16 +45,17 @@ const Profile = () => {
       }
     }
 
-    // Hide loader
-    const loader = document.querySelector(".loader");
-    if (loader) {
-      loader.style.transform = "translateX(100%)";
-    }
+    // No need for manual transition handling
+    // App.jsx will handle hiding the loader after route change
   }, [user]);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    pixelTransition.navigate(navigate, '/login', {
+      colors: "#fef08a,#fde047,#eab308", // Yellow theme
+      gap: 5,
+      speed: 30
+    });
   };
 
   const handleEditProfile = () => {
