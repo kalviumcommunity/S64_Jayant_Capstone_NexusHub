@@ -3,6 +3,8 @@ import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/all";
 import { TiLocationArrow } from "react-icons/ti";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 import Button from "./Button";
 import VideoPreview from "./VideoPreview";
@@ -12,6 +14,8 @@ gsap.registerPlugin(ScrollTrigger);
 const Hero = () => {
   const [currentIndex, setCurrentIndex] = useState(1);
   const [hasClicked, setHasClicked] = useState(false);
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [loadedVideos, setLoadedVideos] = useState(0);
@@ -156,10 +160,17 @@ const Hero = () => {
             </p>
 
             <Button
-              id="watch-trailer"
+              id="start-now-button"
               title="start now"
               leftIcon={<TiLocationArrow />}
               containerClass="bg-yellow-300 flex-center gap-1"
+              onClick={() => {
+                if (isAuthenticated) {
+                  navigate('/feed');
+                } else {
+                  navigate('/login');
+                }
+              }}
             />
           </div>
         </div>
