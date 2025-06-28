@@ -80,5 +80,8 @@ NexusHub combines **real-time messaging**, **task/project management**, and **so
 
 ---
 
-### From here you can access my Frontend : ###
-nexushubb.netlify.app
+### From here you can take a look on my site's Frontend : ###
+`nexushubb.netlify.app`
+
+### Here is my Backend Deployment Link : ###
+`https://nexushub-backend.onrender.com`
