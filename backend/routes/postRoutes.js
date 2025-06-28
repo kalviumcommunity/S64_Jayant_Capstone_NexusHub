@@ -10,7 +10,8 @@ const {
   addComment,
   sharePost,
   deletePost,
-  searchPosts
+  searchPosts,
+  updatePost
 } = require('../controllers/postController');
 
 router.route('/')
@@ -21,6 +22,7 @@ router.get('/search', protect, searchPosts);
 router.get('/user/:userId', protect, getUserPosts);
 
 router.route('/:postId')
+  .put(protect, updatePost)
   .delete(protect, deletePost);
 
 router.post('/:postId/like', protect, toggleLike);

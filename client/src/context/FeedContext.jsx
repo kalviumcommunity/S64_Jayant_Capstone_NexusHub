@@ -205,6 +205,8 @@ export const FeedProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error('Error deleting post:', error);
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response?.data);
       setError(error.response?.data?.message || 'Failed to delete post');
       throw error;
     }
@@ -224,6 +226,20 @@ export const FeedProvider = ({ children }) => {
     } catch (error) {
       console.error('Error sharing post:', error);
       setError(error.response?.data?.message || 'Failed to share post');
+      throw error;
+    }
+  };
+
+  // Update a post
+  const updatePost = async (postId, updateData) => {
+    try {
+      const response = await api.put(`/posts/${postId}`, updateData);
+      // Update the post in state
+      setPosts(prev => prev.map(post => post._id === postId ? response.data.post : post));
+      return response.data.post;
+    } catch (error) {
+      console.error('Error updating post:', error);
+      setError(error.response?.data?.message || 'Failed to update post');
       throw error;
     }
   };
@@ -300,7 +316,8 @@ export const FeedProvider = ({ children }) => {
     deletePost,
     sharePost,
     changeFilter,
-    setError
+    setError,
+    updatePost
   };
 
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>;
