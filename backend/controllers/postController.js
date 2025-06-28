@@ -322,7 +322,7 @@ exports.deletePost = async (req, res) => {
       });
     }
 
-    await post.remove();
+    await Post.findByIdAndDelete(req.params.postId);
 
     // Emit post deletion
     getIO().emit('post_deleted', post._id);
@@ -332,10 +332,15 @@ exports.deletePost = async (req, res) => {
       message: 'Post deleted successfully'
     });
   } catch (error) {
+    console.error('Error deleting post:', error);
+    if (error && error.stack) {
+      console.error('Error stack:', error.stack);
+    }
     res.status(500).json({
       success: false,
       message: 'Error deleting post',
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
   }
 };
@@ -382,6 +387,48 @@ exports.searchPosts = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error searching posts',
+      error: error.message
+    });
+  }
+};
+
+// Update post
+exports.updatePost = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId);
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    if (post.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this post'
+      });
+    }
+
+    // Update allowed fields
+    const { content, tags, visibility } = req.body;
+    if (content !== undefined) post.content = content;
+    if (tags !== undefined) post.tags = tags;
+    if (visibility !== undefined) post.visibility = visibility;
+    post.isEdited = true;
+
+    await post.save();
+    await post.populate('author', 'name email profilePicture');
+
+    res.json({
+      success: true,
+      post
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error updating post',
       error: error.message
     });
   }

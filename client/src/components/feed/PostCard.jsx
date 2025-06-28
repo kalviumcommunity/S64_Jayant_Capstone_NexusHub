@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { useFeed } from '../../context/FeedContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
-import { FiHeart, FiMessageSquare, FiShare, FiMoreVertical, FiTrash, FiGlobe, FiUsers, FiLock } from 'react-icons/fi';
+import { FiHeart, FiMessageSquare, FiShare, FiMoreVertical, FiTrash, FiGlobe, FiUsers, FiLock, FiEdit2 } from 'react-icons/fi';
 
 const PostCard = ({ post }) => {
-  const { likePost, unlikePost, addComment, deletePost, sharePost } = useFeed();
+  const { likePost, unlikePost, addComment, deletePost, sharePost, updatePost } = useFeed();
   const { user } = useAuth();
   const [comment, setComment] = useState('');
   const [showComments, setShowComments] = useState(false);
@@ -18,6 +18,11 @@ const PostCard = ({ post }) => {
   const commentInputRef = useRef(null);
   const menuRef = useRef(null);
   const shareDialogRef = useRef(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+  const [editTags, setEditTags] = useState(post.tags || []);
+  const [editVisibility, setEditVisibility] = useState(post.visibility || 'public');
+  const [isEditing, setIsEditing] = useState(false);
 
   // Check if the current user has liked the post
   const isLiked = post.likes.some(like => like.user._id === user._id);
@@ -113,6 +118,24 @@ const PostCard = ({ post }) => {
     };
   }, []);
 
+  // Handle post update
+  const handleEditPost = async (e) => {
+    e.preventDefault();
+    try {
+      setIsEditing(true);
+      await updatePost(post._id, {
+        content: editContent,
+        tags: editTags,
+        visibility: editVisibility
+      });
+      setShowEditModal(false);
+    } catch (error) {
+      // Optionally show error
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
   // Render media content
   const renderMedia = () => {
     if (!post.media || post.media.length === 0) return null;
@@ -127,6 +150,7 @@ const PostCard = ({ post }) => {
                 alt="Post media" 
                 className="w-full h-auto max-h-[400px] object-cover"
                 loading="lazy"
+                onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
               />
             ) : item.type === 'video' ? (
               <video 
@@ -134,6 +158,7 @@ const PostCard = ({ post }) => {
                 controls 
                 className="w-full h-auto max-h-[400px]"
                 poster={item.thumbnail ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.thumbnail}` : ''}
+                onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
               />
             ) : (
               <a 
@@ -141,6 +166,7 @@ const PostCard = ({ post }) => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="block p-4 bg-white/5 hover:bg-white/10 transition-colors"
+                onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
               >
                 <div className="flex items-center">
                   <div className="bg-blue-500/20 p-3 rounded-lg">
@@ -186,6 +212,7 @@ const PostCard = ({ post }) => {
                 src={post.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}` : '/img/default-avatar.png'} 
                 alt={post.author.name} 
                 className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/50 group-hover:border-purple-500 transition-all duration-300"
+                onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
               />
               <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
@@ -223,6 +250,13 @@ const PostCard = ({ post }) => {
             </button>
             {showMenu && (
               <div className="absolute right-0 mt-1 w-48 bg-[#1A1A1A] border border-[#333] rounded-lg shadow-2xl z-10 overflow-hidden animate-fadeIn">
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="flex items-center gap-2 w-full text-left p-3 text-blue-400 hover:bg-[#222] transition-colors"
+                >
+                  <FiEdit2 size={16} />
+                  <span>Edit Post</span>
+                </button>
                 <button
                   onClick={handleDeletePost}
                   className="flex items-center gap-2 w-full text-left p-3 text-red-400 hover:bg-[#222] transition-colors"
@@ -265,6 +299,7 @@ const PostCard = ({ post }) => {
                     src={post.sharedPost.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.sharedPost.author.profilePicture}` : '/img/default-avatar.png'} 
                     alt={post.sharedPost.author.name} 
                     className="w-9 h-9 rounded-full object-cover border border-purple-500/50 group-hover:border-purple-500 transition-all duration-300"
+                    onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
                   />
                 </div>
               </Link>
@@ -288,12 +323,14 @@ const PostCard = ({ post }) => {
                         alt="Shared post media" 
                         className="w-full h-auto max-h-[200px] object-cover hover:scale-105 transition-transform duration-300"
                         loading="lazy"
+                        onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
                       />
                     ) : item.type === 'video' ? (
                       <video 
                         src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`} 
                         controls 
                         className="w-full h-auto max-h-[200px]"
+                        onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
                       />
                     ) : null}
                   </div>
@@ -387,6 +424,7 @@ const PostCard = ({ post }) => {
                     src={post.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}` : '/img/default-avatar.png'} 
                     alt={post.author.name} 
                     className="w-10 h-10 rounded-full object-cover border border-purple-500/30"
+                    onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
                   />
                   <div className="ml-3">
                     <p className="text-white font-medium">{post.author.name}</p>
@@ -421,6 +459,29 @@ const PostCard = ({ post }) => {
         </div>
       )}
       
+      {/* Edit Post Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <form onSubmit={handleEditPost} className="bg-[#111] rounded-xl p-6 max-w-md w-full border border-[#333] shadow-2xl">
+            <h3 className="text-white font-semibold text-xl mb-4">Edit Post</h3>
+            <textarea
+              value={editContent}
+              onChange={e => setEditContent(e.target.value)}
+              className="w-full bg-[#1A1A1A] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 resize-none mb-4 transition-all duration-300"
+              rows={4}
+              required
+            />
+            {/* Tags and visibility can be added here as needed */}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600">Cancel</button>
+              <button type="submit" disabled={isEditing} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60">
+                {isEditing ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      
       {/* Comments Section */}
       {showComments && (
         <div className="mt-5 pt-4 border-t border-[#333] animate-fadeIn">
@@ -430,6 +491,7 @@ const PostCard = ({ post }) => {
               src={user?.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.profilePicture}` : '/img/default-avatar.png'} 
               alt={user?.name} 
               className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-purple-500/30"
+              onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
             />
             <div className="flex-grow relative">
               <input
@@ -463,6 +525,7 @@ const PostCard = ({ post }) => {
                     src={comment.user.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${comment.user.profilePicture}` : '/img/default-avatar.png'} 
                     alt={comment.user.name} 
                     className="w-10 h-10 rounded-full object-cover border border-purple-500/30 group-hover:border-purple-500/50 transition-all duration-300"
+                    onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
                   />
                 </Link>
                 <div className="flex-grow">

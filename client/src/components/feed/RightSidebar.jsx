@@ -54,7 +54,8 @@ const RightSidebar = () => {
                   alt={story.username}
                   className="w-full h-full rounded-full object-cover"
                   onError={(e) => {
-                    e.target.src = 'https://via.placeholder.com/40';
+                    e.target.onerror = null;
+                    e.target.src = '/img/default-avatar.png';
                   }}
                 />
               </div>
@@ -85,7 +86,8 @@ const RightSidebar = () => {
                   alt={suggestion.username}
                   className="w-10 h-10 rounded-full object-cover"
                   onError={(e) => {
-                    e.target.src = 'https://via.placeholder.com/40';
+                    e.target.onerror = null;
+                    e.target.src = '/img/default-avatar.png';
                   }}
                 />
                 <div>
