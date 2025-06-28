@@ -2,17 +2,19 @@ import React from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaGithub } from 'react-icons/fa';
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const OAuthButtons = () => {
   const handleGoogleLogin = () => {
     // Always try to redirect, even if we think it's not configured
     // The backend will handle the error case gracefully
-    window.location.href = 'http://localhost:5000/api/oauth/google';
+    window.location.href = `${BACKEND_URL}/api/oauth/google`;
   };
 
   const handleGithubLogin = () => {
     // Always try to redirect, even if we think it's not configured
     // The backend will handle the error case gracefully
-    window.location.href = 'http://localhost:5000/api/oauth/github';
+    window.location.href = `${BACKEND_URL}/api/oauth/github`;
   };
 
   return (
