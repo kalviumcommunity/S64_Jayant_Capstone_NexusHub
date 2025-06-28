@@ -26,6 +26,8 @@ function DockItem({
   magnification,
   baseItemSize,
   notificationCount = 0,
+  isDrawerMode = false,
+  isActive = false,
 }) {
   const ref = useRef(null);
   const isHovered = useMotionValue(0);
@@ -45,6 +47,36 @@ function DockItem({
   );
   const size = useSpring(targetSize, spring);
   
+  // Drawer mode renders differently
+  if (isDrawerMode) {
+    return (
+      <div
+        onClick={onClick}
+        className={`mobile-drawer-item ${isActive ? 'active' : ''} ${className}`}
+        tabIndex={0}
+        role="button"
+      >
+        <div className="dock-icon">
+          {Children.map(children, (child) => {
+            if (child.type === DockIcon) return child;
+            return null;
+          })}
+        </div>
+        <div className="item-label">
+          {Children.map(children, (child) => {
+            if (child.type === DockLabel) return child.props.children;
+            return null;
+          })}
+        </div>
+        {notificationCount > 0 && (
+          <div className="notification-badge">
+            {notificationCount > 9 ? '9+' : notificationCount}
+          </div>
+        )}
+      </div>
+    );
+  }
+  
   return (
     <motion.div
       ref={ref}
@@ -57,7 +89,7 @@ function DockItem({
       onFocus={() => isHovered.set(1)}
       onBlur={() => isHovered.set(0)}
       onClick={onClick}
-      className={`dock-item ${className}`}
+      className={`dock-item ${className} ${isActive ? 'active-dock-item' : ''}`}
       tabIndex={0}
       role="button"
       aria-haspopup="true"
@@ -112,6 +144,60 @@ function DockIcon({ children, className = "" }) {
   return <div className={`dock-icon ${className}`}>{children}</div>;
 }
 
+// Mobile Hamburger Toggle Component
+function MobileToggle({ isOpen, onToggle }) {
+  return (
+    <div className="mobile-dock-toggle" onClick={onToggle}>
+      <div className={`hamburger ${isOpen ? 'open' : ''}`}>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  );
+}
+
+// Mobile Drawer Component
+function MobileDrawer({ items, isOpen, onClose, activeItem, onItemClick }) {
+  return (
+    <>
+      <div 
+        className={`mobile-dock-overlay ${isOpen ? 'visible' : ''}`}
+        onClick={onClose}
+      />
+      <motion.div
+        className={`mobile-dock-drawer ${isOpen ? 'open' : ''}`}
+        initial={false}
+        animate={{ x: isOpen ? 0 : '-100%' }}
+        transition={{ 
+          type: "spring", 
+          stiffness: 300, 
+          damping: 30 
+        }}
+      >
+        {items.map((item, index) => (
+          <DockItem
+            key={index}
+            onClick={() => onItemClick(item, index)}
+            className={item.className || ''}
+            mouseX={useMotionValue(0)}
+            spring={{ mass: 0.1, stiffness: 150, damping: 12 }}
+            distance={0}
+            magnification={0}
+            baseItemSize={24}
+            notificationCount={item.notificationCount || 0}
+            isDrawerMode={true}
+            isActive={activeItem === index}
+          >
+            <DockIcon>{item.icon}</DockIcon>
+            <DockLabel>{item.label}</DockLabel>
+          </DockItem>
+        ))}
+      </motion.div>
+    </>
+  );
+}
+
 export default function Dock({
   items,
   className = "",
@@ -122,9 +208,14 @@ export default function Dock({
   dockHeight = 256,
   baseItemSize = 50,
   vertical = false,
+  mobileMode = "drawer", // "drawer" or "bottom"
 }) {
   const mouseX = useMotionValue(Infinity);
   const isHovered = useMotionValue(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activeItem, setActiveItem] = useState(null);
+  
   const maxHeight = useMemo(
     () => Math.max(dockHeight, magnification + magnification / 2 + 4),
     [magnification, dockHeight]
@@ -132,21 +223,120 @@ export default function Dock({
   const heightRow = useTransform(isHovered, [0, 1], [panelHeight, maxHeight]);
   const height = useSpring(heightRow, spring);
   
-  // Add active state tracking
-  const [activeItem, setActiveItem] = useState(null);
+  // Handle responsive breakpoint detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
-  // Handle item click with active state
+  // Handle item click with active state and drawer closing
   const handleItemClick = (item, index) => {
     setActiveItem(index);
     if (item.onClick) {
       item.onClick();
     }
+    // Close drawer on mobile after clicking
+    if (isMobile && mobileMode === "drawer") {
+      setIsDrawerOpen(false);
+    }
   };
   
+  // Handle drawer toggle
+  const toggleDrawer = () => {
+    setIsDrawerOpen(!isDrawerOpen);
+  };
+  
+  // Handle escape key to close drawer
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isDrawerOpen) {
+        setIsDrawerOpen(false);
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isDrawerOpen]);
+  
+  // Prevent body scroll when drawer is open
+  useEffect(() => {
+    if (isDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isDrawerOpen]);
+  
+  // Mobile drawer mode
+  if (isMobile && mobileMode === "drawer") {
+    return (
+      <>
+        <MobileToggle isOpen={isDrawerOpen} onToggle={toggleDrawer} />
+        <MobileDrawer 
+          items={items}
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          activeItem={activeItem}
+          onItemClick={handleItemClick}
+        />
+      </>
+    );
+  }
+  
+  // Mobile bottom dock mode
+  if (isMobile && mobileMode === "bottom") {
+    return (
+      <motion.div
+        className="dock-outer"
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <motion.div
+          className={`dock-panel mobile-bottom ${className}`}
+          role="toolbar"
+          aria-label="Application dock"
+        >
+          {items.map((item, index) => (
+            <DockItem
+              key={index}
+              onClick={() => handleItemClick(item, index)}
+              className={`${item.className || ''}`}
+              mouseX={mouseX}
+              spring={spring}
+              distance={distance}
+              magnification={magnification}
+              baseItemSize={baseItemSize}
+              notificationCount={item.notificationCount || 0}
+              isActive={activeItem === index}
+            >
+              <DockIcon>{item.icon}</DockIcon>
+              <DockLabel>{item.label}</DockLabel>
+            </DockItem>
+          ))}
+        </motion.div>
+      </motion.div>
+    );
+  }
+  
+  // Desktop vertical dock (default)
   return (
     <motion.div
       style={{ height, scrollbarWidth: "none" }}
       className="dock-outer"
+      initial={{ x: -100, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.5 }}
     >
       <motion.div
         onMouseMove={({ pageX }) => {
@@ -166,13 +356,14 @@ export default function Dock({
           <DockItem
             key={index}
             onClick={() => handleItemClick(item, index)}
-            className={`${item.className || ''} ${activeItem === index ? 'active-dock-item' : ''}`}
+            className={`${item.className || ''}`}
             mouseX={mouseX}
             spring={spring}
             distance={distance}
             magnification={magnification}
             baseItemSize={baseItemSize}
             notificationCount={item.notificationCount || 0}
+            isActive={activeItem === index}
           >
             <DockIcon>{item.icon}</DockIcon>
             <DockLabel>{item.label}</DockLabel>

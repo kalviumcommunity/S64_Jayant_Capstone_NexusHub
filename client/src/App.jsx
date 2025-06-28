@@ -16,6 +16,7 @@ import CreatePost from './pages/CreatePost'
 import TeamPage from './pages/TeamPage'
 import OAuthSuccess from './pages/OAuthSuccess'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import DockDemo from './components/dock/DockDemo'
 
 import { AuthProvider } from './context/AuthContext.jsx'
 import { TaskProvider } from './context/TaskContext.jsx'
@@ -83,6 +84,7 @@ const AppContent = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
+          <Route path="/dock-demo" element={<DockDemo />} />
           <Route path="/" element={
             <>
               <Navbar />

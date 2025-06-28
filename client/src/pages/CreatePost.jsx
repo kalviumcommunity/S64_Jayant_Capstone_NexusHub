@@ -107,8 +107,8 @@ const CreatePostPage = () => {
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
 
-        {/* Left Dock */}
-        <div className="fixed left-0 top-0 h-full z-20 flex items-center">
+        {/* Responsive Dock */}
+        <div className="z-20">
           <Dock 
             items={dockItems}
             panelHeight={400}
@@ -118,24 +118,20 @@ const CreatePostPage = () => {
             vertical={true}
             spring={{ mass: 0.1, stiffness: 150, damping: 12 }}
             distance={200}
+            mobileMode="drawer"
           />
         </div>
 
         {/* Content */}
         <motion.div 
-          className="relative z-10 container mx-auto px-4 py-16"
+          className="relative z-10 container mx-auto px-4 py-16 lg:pl-24"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className="grid grid-cols-12 gap-6">
-            {/* Left Spacer (20% width) */}
-            <div className="col-span-2 hidden lg:block">
-              {/* This is just a spacer for the dock */}
-            </div>
-            
-            {/* Main Content (60% width) */}
-            <div className="col-span-12 md:col-span-8 lg:col-span-7">
+            {/* Main Content */}
+            <div className="col-span-12 lg:col-span-8">
               {/* Header */}
               <motion.div 
                 className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8"
