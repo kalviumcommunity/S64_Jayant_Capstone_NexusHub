@@ -1,0 +1,73 @@
+/* Dock animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(90, 60, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(90, 60, 255, 0.4);
+  }
+}
+
+.active-dock-item {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Notification badge animation */
+@keyframes notification-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
+
+.notification-badge {
+  animation: notification-pulse 1.5s infinite;
+}
+
+/* Panel animations */
+.panel-enter {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.panel-enter-active {
+  transform: translateX(0);
+  opacity: 1;
+  transition: all 300ms;
+}
+
+.panel-exit {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.panel-exit-active {
+  transform: translateX(100%);
+  opacity: 0;
+  transition: all 300ms;
+}
+
+/* Hover effects for dock items */
+.dock-item:hover .dock-icon svg {
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.5));
+}
+
+/* Tooltip animation */
+@keyframes tooltip-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.dock-label {
+  animation: tooltip-appear 0.2s forwards;
+}

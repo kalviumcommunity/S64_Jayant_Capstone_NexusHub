@@ -176,16 +176,19 @@ const PostCard = ({ post }) => {
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 mb-6">
+    <div className="bg-[#111111]/80 backdrop-blur-md border border-[#222] rounded-xl p-5 mb-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:border-[#333]">
       {/* Post Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <Link to={`/profile/${post.author._id}`} className="flex-shrink-0">
-            <img 
-              src={post.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}` : '/img/default-avatar.png'} 
-              alt={post.author.name} 
-              className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50"
-            />
+          <Link to={`/profile/${post.author._id}`} className="flex-shrink-0 group">
+            <div className="relative">
+              <img 
+                src={post.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}` : '/img/default-avatar.png'} 
+                alt={post.author.name} 
+                className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/50 group-hover:border-purple-500 transition-all duration-300"
+              />
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-purple-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
           </Link>
           <div className="ml-3">
             <div className="flex items-center">
@@ -214,15 +217,15 @@ const PostCard = ({ post }) => {
           <div className="relative" ref={menuRef}>
             <button 
               onClick={() => setShowMenu(!showMenu)}
-              className="text-white/50 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+              className="text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-all duration-200"
             >
               <FiMoreVertical size={18} />
             </button>
             {showMenu && (
-              <div className="absolute right-0 mt-1 w-48 bg-[#1A1A1A] border border-white/10 rounded-lg shadow-xl z-10">
+              <div className="absolute right-0 mt-1 w-48 bg-[#1A1A1A] border border-[#333] rounded-lg shadow-2xl z-10 overflow-hidden animate-fadeIn">
                 <button
                   onClick={handleDeletePost}
-                  className="flex items-center gap-2 w-full text-left p-3 text-red-400 hover:bg-white/5 transition-colors"
+                  className="flex items-center gap-2 w-full text-left p-3 text-red-400 hover:bg-[#222] transition-colors"
                 >
                   <FiTrash size={16} />
                   <span>Delete Post</span>
@@ -234,17 +237,17 @@ const PostCard = ({ post }) => {
       </div>
       
       {/* Post Content */}
-      <div className="mt-3">
-        <p className="text-white whitespace-pre-wrap">{post.content}</p>
+      <div className="mt-4">
+        <p className="text-white whitespace-pre-wrap leading-relaxed">{post.content}</p>
         
         {/* Tags */}
         {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-3">
             {post.tags.map((tag, index) => (
               <Link 
                 key={index} 
                 to={`/feed?tag=${tag}`}
-                className="bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full text-sm hover:bg-purple-500/30 transition-colors"
+                className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-300 px-3 py-1 rounded-full text-sm hover:from-purple-500/30 hover:to-blue-500/30 transition-all duration-300"
               >
                 #{tag}
               </Link>
@@ -254,14 +257,16 @@ const PostCard = ({ post }) => {
         
         {/* Shared Post */}
         {post.sharedPost && (
-          <div className="mt-4 p-3 border border-white/10 rounded-lg bg-white/5">
+          <div className="mt-4 p-4 border border-[#333] rounded-lg bg-[#1A1A1A]/70 backdrop-blur-sm">
             <div className="flex items-center">
-              <Link to={`/profile/${post.sharedPost.author._id}`} className="flex-shrink-0">
-                <img 
-                  src={post.sharedPost.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.sharedPost.author.profilePicture}` : '/img/default-avatar.png'} 
-                  alt={post.sharedPost.author.name} 
-                  className="w-8 h-8 rounded-full object-cover border border-purple-500/50"
-                />
+              <Link to={`/profile/${post.sharedPost.author._id}`} className="flex-shrink-0 group">
+                <div className="relative">
+                  <img 
+                    src={post.sharedPost.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.sharedPost.author.profilePicture}` : '/img/default-avatar.png'} 
+                    alt={post.sharedPost.author.name} 
+                    className="w-9 h-9 rounded-full object-cover border border-purple-500/50 group-hover:border-purple-500 transition-all duration-300"
+                  />
+                </div>
               </Link>
               <div className="ml-2">
                 <Link to={`/profile/${post.sharedPost.author._id}`} className="text-white font-medium hover:text-purple-400 transition-colors">
@@ -270,18 +275,18 @@ const PostCard = ({ post }) => {
                 <p className="text-white/50 text-xs">{formatDistanceToNow(new Date(post.sharedPost.createdAt), { addSuffix: true })}</p>
               </div>
             </div>
-            <p className="text-white/80 mt-2 whitespace-pre-wrap">{post.sharedPost.content}</p>
+            <p className="text-white/80 mt-2 whitespace-pre-wrap leading-relaxed">{post.sharedPost.content}</p>
             
             {/* Shared post media */}
             {post.sharedPost.media && post.sharedPost.media.length > 0 && (
-              <div className={`mt-3 grid ${post.sharedPost.media.length > 1 ? 'grid-cols-2 gap-2' : 'grid-cols-1'}`}>
+              <div className={`mt-3 grid ${post.sharedPost.media.length > 1 ? 'grid-cols-2 gap-3' : 'grid-cols-1'}`}>
                 {post.sharedPost.media.map((item, index) => (
-                  <div key={index} className="rounded-lg overflow-hidden bg-white/5">
+                  <div key={index} className="rounded-lg overflow-hidden bg-[#222] shadow-md">
                     {item.type === 'image' ? (
                       <img 
                         src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`} 
                         alt="Shared post media" 
-                        className="w-full h-auto max-h-[200px] object-cover"
+                        className="w-full h-auto max-h-[200px] object-cover hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
                     ) : item.type === 'video' ? (
@@ -303,30 +308,37 @@ const PostCard = ({ post }) => {
       </div>
       
       {/* Post Stats */}
-      <div className="flex items-center justify-between mt-4 text-white/50 text-sm">
+      <div className="flex items-center justify-between mt-5 text-white/50 text-sm">
         <div>
           {post.likes.length > 0 && (
-            <span>{post.likes.length} {post.likes.length === 1 ? 'like' : 'likes'}</span>
+            <div className="flex items-center">
+              <div className="bg-gradient-to-r from-red-500 to-pink-500 w-5 h-5 rounded-full flex items-center justify-center mr-2">
+                <FiHeart size={12} className="text-white fill-current" />
+              </div>
+              <span>{post.likes.length} {post.likes.length === 1 ? 'like' : 'likes'}</span>
+            </div>
           )}
         </div>
         <div>
           {post.comments.length > 0 && (
             <button 
               onClick={toggleComments}
-              className="hover:text-white transition-colors"
+              className="hover:text-white transition-colors flex items-center"
             >
-              {post.comments.length} {post.comments.length === 1 ? 'comment' : 'comments'}
+              <span>{post.comments.length} {post.comments.length === 1 ? 'comment' : 'comments'}</span>
             </button>
           )}
         </div>
       </div>
       
       {/* Post Actions */}
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#333]">
         <button 
           onClick={handleLikeToggle}
-          className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-colors ${
-            isLiked ? 'text-red-400 bg-red-400/10' : 'text-white/70 hover:bg-white/5 hover:text-white'
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+            isLiked 
+              ? 'text-white bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white'
           }`}
         >
           <FiHeart size={18} className={isLiked ? 'fill-current' : ''} />
@@ -335,7 +347,7 @@ const PostCard = ({ post }) => {
         
         <button 
           onClick={toggleComments}
-          className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition-all duration-300"
         >
           <FiMessageSquare size={18} />
           <span>Comment</span>
@@ -343,7 +355,7 @@ const PostCard = ({ post }) => {
         
         <button 
           onClick={handleShareClick}
-          className="flex items-center gap-2 px-3 py-1 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white/70 hover:bg-white/5 hover:text-white transition-all duration-300"
         >
           <FiShare size={18} />
           <span>Share</span>
@@ -352,54 +364,56 @@ const PostCard = ({ post }) => {
       
       {/* Share Dialog */}
       {showShareDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
           <div 
             ref={shareDialogRef}
-            className="bg-[#1A1A1A] border border-white/10 rounded-xl p-4 w-full max-w-lg"
+            className="bg-[#111] rounded-xl p-5 max-w-md w-full border border-[#333] shadow-2xl"
           >
-            <h3 className="text-white font-medium mb-4">Share this post</h3>
+            <h3 className="text-white font-semibold text-xl mb-4">Share Post</h3>
             <form onSubmit={handleShareSubmit}>
               <textarea
                 value={shareContent}
                 onChange={(e) => setShareContent(e.target.value)}
                 placeholder="Add a comment (optional)"
-                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white resize-none focus:outline-none focus:ring-1 focus:ring-purple-500 min-h-[100px]"
+                className="w-full bg-[#1A1A1A] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 resize-none mb-4 transition-all duration-300"
+                rows={3}
+                autoFocus
               />
               
               {/* Original post preview */}
-              <div className="mt-4 p-3 border border-white/10 rounded-lg bg-white/5">
+              <div className="bg-[#1A1A1A] rounded-lg p-4 mb-5 border border-[#333]">
                 <div className="flex items-center">
                   <img 
                     src={post.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}` : '/img/default-avatar.png'} 
                     alt={post.author.name} 
-                    className="w-8 h-8 rounded-full object-cover border border-purple-500/50"
+                    className="w-10 h-10 rounded-full object-cover border border-purple-500/30"
                   />
-                  <div className="ml-2">
+                  <div className="ml-3">
                     <p className="text-white font-medium">{post.author.name}</p>
                     <p className="text-white/50 text-xs">{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</p>
                   </div>
                 </div>
-                <p className="text-white/80 mt-2 line-clamp-2">{post.content}</p>
+                <p className="text-white/80 mt-3 line-clamp-2">{post.content}</p>
               </div>
               
-              <div className="flex justify-end gap-3 mt-4">
+              <div className="flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowShareDialog(false)}
-                  className="px-4 py-2 rounded-lg font-medium bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                  className="px-5 py-2.5 rounded-lg bg-[#222] text-white hover:bg-[#333] transition-all duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSharing}
-                  className={`px-4 py-2 rounded-lg font-medium ${
+                  className={`px-5 py-2.5 rounded-lg ${
                     isSharing
                       ? 'bg-purple-500/30 text-white/50 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600'
-                  } transition-colors`}
+                      : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 shadow-lg hover:shadow-purple-500/20'
+                  } transition-all duration-300`}
                 >
-                  {isSharing ? 'Sharing...' : 'Share'}
+                  {isSharing ? 'Sharing...' : 'Share Now'}
                 </button>
               </div>
             </form>
@@ -409,13 +423,13 @@ const PostCard = ({ post }) => {
       
       {/* Comments Section */}
       {showComments && (
-        <div className="mt-4 pt-3 border-t border-white/10">
+        <div className="mt-5 pt-4 border-t border-[#333] animate-fadeIn">
           {/* Comment Form */}
-          <form onSubmit={handleCommentSubmit} className="flex items-center gap-3 mb-4">
+          <form onSubmit={handleCommentSubmit} className="flex items-start gap-3 mb-5">
             <img 
               src={user?.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.profilePicture}` : '/img/default-avatar.png'} 
               alt={user?.name} 
-              className="w-8 h-8 rounded-full object-cover border border-purple-500/50"
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-purple-500/30"
             />
             <div className="flex-grow relative">
               <input
@@ -424,16 +438,16 @@ const PostCard = ({ post }) => {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Write a comment..."
-                className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full bg-[#1A1A1A] border border-[#333] rounded-full px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300"
               />
               <button 
                 type="submit" 
                 disabled={isSubmitting || !comment.trim()}
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1 rounded-full text-sm ${
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 rounded-full text-sm ${
                   isSubmitting || !comment.trim()
                     ? 'bg-purple-500/30 text-white/50 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600'
-                } transition-colors`}
+                    : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-purple-500/20'
+                } transition-all duration-300`}
               >
                 {isSubmitting ? 'Sending...' : 'Send'}
               </button>
@@ -441,25 +455,27 @@ const PostCard = ({ post }) => {
           </form>
           
           {/* Comments List */}
-          <div className="space-y-3">
+          <div className="space-y-5">
             {post.comments.map((comment, index) => (
-              <div key={index} className="flex gap-3">
+              <div key={index} className="flex items-start gap-3 group">
                 <Link to={`/profile/${comment.user._id}`} className="flex-shrink-0">
                   <img 
                     src={comment.user.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${comment.user.profilePicture}` : '/img/default-avatar.png'} 
                     alt={comment.user.name} 
-                    className="w-8 h-8 rounded-full object-cover border border-purple-500/50"
+                    className="w-10 h-10 rounded-full object-cover border border-purple-500/30 group-hover:border-purple-500/50 transition-all duration-300"
                   />
                 </Link>
                 <div className="flex-grow">
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <Link to={`/profile/${comment.user._id}`} className="text-white font-medium hover:text-purple-400 transition-colors">
+                  <div className="bg-[#1A1A1A] rounded-lg px-4 py-3 border border-[#333] group-hover:border-[#444] transition-all duration-300">
+                    <Link to={`/profile/${comment.user._id}`} className="font-medium text-white hover:text-purple-400 transition-colors">
                       {comment.user.name}
                     </Link>
-                    <p className="text-white/90 mt-1">{comment.content}</p>
+                    <p className="text-white/90 mt-1 leading-relaxed">{comment.content}</p>
                   </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-white/50">
+                  <div className="flex items-center gap-4 mt-2 text-xs text-white/50">
                     <span>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}</span>
+                    <button className="hover:text-white transition-colors">Like</button>
+                    <button className="hover:text-white transition-colors">Reply</button>
                   </div>
                 </div>
               </div>

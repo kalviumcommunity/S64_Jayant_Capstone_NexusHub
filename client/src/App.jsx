@@ -12,6 +12,7 @@ import Signup from './components/auth/Signup'
 import Profile from './pages/Profile'
 import Dashboard from './pages/Dashboard'
 import Feed from './pages/Feed'
+import CreatePost from './pages/CreatePost'
 import TeamPage from './pages/TeamPage'
 import OAuthSuccess from './pages/OAuthSuccess'
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -98,6 +99,7 @@ const AppContent = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/feed" element={<Feed />} />
+            <Route path="/create-post" element={<CreatePost />} />
             <Route path="/teams/:teamId" element={<TeamPage />} />
             {/* Add other protected routes here */}
           </Route>
