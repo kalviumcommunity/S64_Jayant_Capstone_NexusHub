@@ -16,7 +16,8 @@ import CreatePost from './pages/CreatePost'
 import TeamPage from './pages/TeamPage'
 import OAuthSuccess from './pages/OAuthSuccess'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import DockDemo from './components/dock/DockDemo'
+import SidebarLayout from './components/ui/SidebarLayout'
+import Explore from './pages/Explore'
 
 import { AuthProvider } from './context/AuthContext.jsx'
 import { TaskProvider } from './context/TaskContext.jsx'
@@ -84,7 +85,6 @@ const AppContent = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
-          <Route path="/dock-demo" element={<DockDemo />} />
           <Route path="/" element={
             <>
               <Navbar />
@@ -96,14 +96,17 @@ const AppContent = () => {
             </>
           } />
           
-          {/* Protected Routes */}
+          {/* Protected Routes with SidebarLayout */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/feed" element={<Feed />} />
-            <Route path="/create-post" element={<CreatePost />} />
-            <Route path="/teams/:teamId" element={<TeamPage />} />
-            {/* Add other protected routes here */}
+            <Route element={<SidebarLayout />}>
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/feed" element={<Feed />} />
+              <Route path="/create-post" element={<CreatePost />} />
+              <Route path="/teams/:teamId" element={<TeamPage />} />
+              <Route path="/explore" element={<Explore />} />
+              {/* Add other protected routes here */}
+            </Route>
           </Route>
         </Routes>
       </main>
