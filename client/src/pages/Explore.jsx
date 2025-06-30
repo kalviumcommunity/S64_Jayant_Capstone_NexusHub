@@ -1,179 +1,405 @@
-import React, { useState } from "react";
-import AnimatedTitle from "../components/AnimatedTitle";
-import Button from "../components/Button";
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext.jsx';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FiSearch,
+  FiUsers,
+  FiUser,
+  FiFileText,
+  FiArrowRight,
+  FiEye,
+  FiMessageSquare,
+  FiCalendar
+} from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import api from '../utils/api.js';
 
-const TABS = ["Users", "Teams", "Projects", "Posts"];
+const Explore = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-// Mock data for showcase
-const MOCK_USERS = [
-  { id: 1, name: "Jayant Kumawat", username: "jayantk", bio: "UI/UX Designer & Developer" },
-  { id: 2, name: "Priyanshi Sharma", username: "priyanshi", bio: "Frontend Engineer" },
-  { id: 3, name: "Aman Gupta", username: "amang", bio: "Full Stack Dev" },
-];
-const MOCK_TEAMS = [
-  { id: 1, name: "Design Wizards", members: 8, description: "Creative design team" },
-  { id: 2, name: "Code Ninjas", members: 12, description: "Elite coding squad" },
-];
-const MOCK_PROJECTS = [
-  { id: 1, title: "NexusHub Redesign", status: "In Progress", description: "UI/UX overhaul for NexusHub" },
-  { id: 2, title: "Team Portal", status: "Completed", description: "Internal team management tool" },
-];
-const MOCK_POSTS = [
-  { id: 1, author: "Jayant Kumawat", content: "Just finished the new dashboard UI! 🚀" },
-  { id: 2, author: "Priyanshi Sharma", content: "Looking for feedback on our latest design system." },
-];
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all'); // all, users, teams, posts
+  const [searchResults, setSearchResults] = useState({ users: [], teams: [], posts: [] });
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(''); // userId or teamId for which action is loading
+  const [actionSuccess, setActionSuccess] = useState('');
 
-export default function Explore() {
-  const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("Users");
-  const [results, setResults] = useState([]);
-  const [searched, setSearched] = useState(false);
-
-  const handleSearch = () => {
-    setSearched(true);
-    let filtered = [];
-    const q = search.toLowerCase();
-    if (activeTab === "Users") {
-      filtered = MOCK_USERS.filter(
-        u => u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q) || u.bio.toLowerCase().includes(q)
-      );
-    } else if (activeTab === "Teams") {
-      filtered = MOCK_TEAMS.filter(
-        t => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)
-      );
-    } else if (activeTab === "Projects") {
-      filtered = MOCK_PROJECTS.filter(
-        p => p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.status.toLowerCase().includes(q)
-      );
-    } else if (activeTab === "Posts") {
-      filtered = MOCK_POSTS.filter(
-        p => p.author.toLowerCase().includes(q) || p.content.toLowerCase().includes(q)
-      );
+  // Handle search
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    setHasSearched(true);
+    setError(null);
+    try {
+      const [usersRes, teamsRes, postsRes] = await Promise.all([
+        api.get(`/users/search?query=${encodeURIComponent(searchQuery)}`),
+        api.get(`/teams?search=${encodeURIComponent(searchQuery)}`),
+        api.get(`/posts/search?query=${encodeURIComponent(searchQuery)}`)
+      ]);
+      setSearchResults({
+        users: usersRes.data.users || [],
+        teams: (teamsRes.data.data || []),
+        posts: postsRes.data.posts || []
+      });
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+      setSearchResults({ users: [], teams: [], posts: [] });
+    } finally {
+      setIsSearching(false);
     }
-    setResults(filtered);
   };
 
-  // Reset results when tab changes or search is cleared
-  React.useEffect(() => {
-    setResults([]);
-    setSearched(false);
-    setSearch("");
-  }, [activeTab]);
+  // Handle filter change
+  const handleFilterChange = (filter) => setActiveFilter(filter);
+  const handleNavigation = (path) => navigate(path);
+
+  // Friend request action
+  const sendFriendRequest = async (userId) => {
+    setActionLoading(userId);
+    setActionSuccess('');
+    try {
+      await api.post('/users/friend-request', { userId });
+      setActionSuccess('Friend request sent!');
+    } catch (err) {
+      setActionSuccess('Failed to send request');
+    } finally {
+      setActionLoading('');
+    }
+  };
+
+  // Team join request action
+  const requestToJoinTeam = async (teamId) => {
+    setActionLoading(teamId);
+    setActionSuccess('');
+    try {
+      await api.post(`/teams/${teamId}/join`);
+      setActionSuccess('Join request sent!');
+    } catch (err) {
+      setActionSuccess('Failed to send join request');
+    } finally {
+      setActionLoading('');
+    }
+  };
+
+  // Get filtered results based on active filter
+  const getFilteredResults = () => {
+    if (activeFilter === 'all') return searchResults;
+    return {
+      users: activeFilter === 'users' ? searchResults.users : [],
+      teams: activeFilter === 'teams' ? searchResults.teams : [],
+      posts: activeFilter === 'posts' ? searchResults.posts : []
+    };
+  };
+
+  const filteredResults = getFilteredResults();
+  const totalResults = filteredResults.users.length + filteredResults.teams.length + filteredResults.posts.length;
 
   return (
-    <div className="min-h-screen w-full px-4 py-8 md:px-12 bg-neutral-100 dark:bg-neutral-900 font-general transition-colors duration-300">
-      <div className="max-w-5xl mx-auto">
-        <AnimatedTitle title="Explore" containerClass="mb-8" />
-        <form className="flex flex-col md:flex-row items-center gap-4 mb-8" onSubmit={e => { e.preventDefault(); handleSearch(); }}>
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={`Search ${activeTab.toLowerCase()}...`}
-            className="w-full md:w-96 px-5 py-3 rounded-full border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 font-general text-base focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-sm transition"
-          />
-          <Button
-            title="Search"
-            containerClass="bg-purple-600 text-white px-8 py-3 rounded-full font-general text-base shadow-md hover:bg-purple-700 transition"
-            onClick={handleSearch}
-          />
-        </form>
-        <div className="flex gap-2 mb-8 flex-wrap">
-          {TABS.map(tab => (
-            <Button
-              key={tab}
-              title={tab}
-              containerClass={`px-6 py-2 rounded-full font-general text-sm shadow-sm transition border border-transparent ${activeTab === tab ? "bg-purple-600 text-white" : "bg-violet-50 text-black dark:bg-neutral-800 dark:text-neutral-200"}`}
-              onClick={() => setActiveTab(tab)}
-            />
-          ))}
-        </div>
-        <div className="mt-8">
-          {activeTab === "Users" && (
-            <div className="bg-white dark:bg-neutral-800 rounded-xl shadow p-8 text-neutral-700 dark:text-neutral-200 min-h-[120px]">
-              {searched ? (
-                results.length > 0 ? (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {results.map(user => (
-                      <div key={user.id} className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-5 flex flex-col gap-2">
-                        <span className="font-bold text-lg text-purple-700 dark:text-purple-400">{user.name}</span>
-                        <span className="text-sm text-neutral-500">@{user.username}</span>
-                        <span className="text-base">{user.bio}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center text-neutral-400">No users found.</div>
-                )
-              ) : (
-                <div className="text-center text-neutral-400">User search results will appear here.</div>
-              )}
+    <div className="relative min-h-screen w-full overflow-hidden">
+      {/* Video Background */}
+      <video
+        className="fixed inset-0 w-full h-full object-cover z-0"
+        src="/videos/Background%20Vd.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        style={{ pointerEvents: 'none', filter: 'brightness(0.6) blur(1px)' }}
+      />
+      {/* Foreground content */}
+      <div className="relative z-10 min-h-screen flex flex-col justify-start items-center bg-transparent backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-8 w-full">
+          {/* Hero Section */}
+          <div className="mb-12 mt-32">
+            <div className="text-center">
+              <h1 className="md:text-6xl text-4xl lg:text-7xl font-bold text-white mb-4 drop-shadow-lg">
+                Explore NexusHub
+              </h1>
+              <p className="text-xl text-white/80 max-w-2xl mx-auto drop-shadow">
+                Discover amazing people, teams, and content from around the world
+              </p>
+            </div>
+          </div>
+          {/* Search Section */}
+          <div className="mb-8 mt-12">
+            <div className="max-w-4xl mx-auto">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search for users, teams, or posts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:border-purple-500 transition-all"
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                  className="absolute right-2 top-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-xl hover:from-purple-700 hover:to-blue-600 transition-all disabled:opacity-50"
+                >
+                  {isSearching ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <FiSearch size={20} />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+          {/* Error State */}
+          {error && <div className="text-center text-red-400 mb-4">{error}</div>}
+          {/* Filter Tabs */}
+          {hasSearched && (
+            <div className="mb-8">
+              <div className="flex justify-center space-x-4">
+                {[
+                  { key: 'all', label: 'All', icon: FiSearch, count: totalResults },
+                  { key: 'users', label: 'Users', icon: FiUser, count: filteredResults.users.length },
+                  { key: 'teams', label: 'Teams', icon: FiUsers, count: filteredResults.teams.length },
+                  { key: 'posts', label: 'Posts', icon: FiFileText, count: filteredResults.posts.length }
+                ].map((filter) => (
+                  <button
+                    key={filter.key}
+                    onClick={() => handleFilterChange(filter.key)}
+                    className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all ${
+                      activeFilter === filter.key
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-500 text-white'
+                        : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    <filter.icon size={18} />
+                    <span>{filter.label}</span>
+                    <span className="bg-white/20 px-2 py-1 rounded-full text-xs">
+                      {filter.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
-          {activeTab === "Teams" && (
-            <div className="bg-white dark:bg-neutral-800 rounded-xl shadow p-8 text-neutral-700 dark:text-neutral-200 min-h-[120px]">
-              {searched ? (
-                results.length > 0 ? (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {results.map(team => (
-                      <div key={team.id} className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-5 flex flex-col gap-2">
-                        <span className="font-bold text-lg text-purple-700 dark:text-purple-400">{team.name}</span>
-                        <span className="text-sm text-neutral-500">{team.members} members</span>
-                        <span className="text-base">{team.description}</span>
-                      </div>
-                    ))}
+          {/* Search Results */}
+          <AnimatePresence mode="wait">
+            {hasSearched && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+              >
+                {totalResults === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <h3 className="text-2xl font-bold text-white mb-2">No results found</h3>
+                    <p className="text-white/60">Try adjusting your search terms or filters</p>
                   </div>
                 ) : (
-                  <div className="text-center text-neutral-400">No teams found.</div>
-                )
-              ) : (
-                <div className="text-center text-neutral-400">Team search results will appear here.</div>
-              )}
-            </div>
-          )}
-          {activeTab === "Projects" && (
-            <div className="bg-white dark:bg-neutral-800 rounded-xl shadow p-8 text-neutral-700 dark:text-neutral-200 min-h-[120px]">
-              {searched ? (
-                results.length > 0 ? (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {results.map(project => (
-                      <div key={project.id} className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-5 flex flex-col gap-2">
-                        <span className="font-bold text-lg text-purple-700 dark:text-purple-400">{project.title}</span>
-                        <span className="text-sm text-neutral-500">Status: {project.status}</span>
-                        <span className="text-base">{project.description}</span>
+                  <div className="space-y-8">
+                    {/* Users Section */}
+                    {filteredResults.users.length > 0 && (
+                      <div>
+                        <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                          <FiUser className="mr-2" />
+                          Users ({filteredResults.users.length})
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {filteredResults.users.map((u) => {
+                            const isPrivate = u.isPrivate && (!u.friends || !u.friends.includes(user?._id));
+                            return (
+                              <motion.div
+                                key={u._id}
+                                whileHover={{ y: -5 }}
+                                className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all"
+                                onClick={() => !isPrivate && handleNavigation(`/profile/${u.username}`)}
+                              >
+                                <div className="flex items-center space-x-4 mb-4">
+                                  <img
+                                    src={u.profilePicture || '/default-avatar.png'}
+                                    alt={u.name || u.username}
+                                    className="w-16 h-16 rounded-full object-cover"
+                                  />
+                                  <div>
+                                    <h3 className="text-lg font-bold text-white">{u.name || u.username}</h3>
+                                    <p className="text-white/60">@{u.username}</p>
+                                  </div>
+                                </div>
+                                <p className="text-white/80 text-sm mb-4">{u.bio}</p>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-wrap gap-2">
+                                    {(u.skills || []).slice(0, 3).map((skill) => (
+                                      <span
+                                        key={skill}
+                                        className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  {!isPrivate ? (
+                                    <FiArrowRight className="text-white/40" />
+                                  ) : (
+                                    <button
+                                      className="px-3 py-1 bg-purple-600 text-white rounded-full text-xs hover:bg-purple-700 transition-all disabled:opacity-50"
+                                      disabled={actionLoading === u._id}
+                                      onClick={e => { e.stopPropagation(); sendFriendRequest(u._id); }}
+                                    >
+                                      {actionLoading === u._id ? 'Sending...' : 'Send Friend Request'}
+                                    </button>
+                                  )}
+                                </div>
+                                {isPrivate && (
+                                  <div className="mt-2 text-xs text-white/60">Private profile: Only limited info visible</div>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center text-neutral-400">No projects found.</div>
-                )
-              ) : (
-                <div className="text-center text-neutral-400">Project search results will appear here.</div>
-              )}
-            </div>
-          )}
-          {activeTab === "Posts" && (
-            <div className="bg-white dark:bg-neutral-800 rounded-xl shadow p-8 text-neutral-700 dark:text-neutral-200 min-h-[120px]">
-              {searched ? (
-                results.length > 0 ? (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {results.map(post => (
-                      <div key={post.id} className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 p-5 flex flex-col gap-2">
-                        <span className="font-bold text-lg text-purple-700 dark:text-purple-400">{post.author}</span>
-                        <span className="text-base">{post.content}</span>
+                    )}
+                    {/* Teams Section */}
+                    {filteredResults.teams.length > 0 && (
+                      <div>
+                        <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                          <FiUsers className="mr-2" />
+                          Teams ({filteredResults.teams.length})
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {filteredResults.teams.map((t) => {
+                            const isPrivate = t.isPublic === false;
+                            const isMember = t.members && t.members.some(m => m.user === user?._id);
+                            return (
+                              <motion.div
+                                key={t._id}
+                                whileHover={{ y: -5 }}
+                                className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all"
+                                onClick={() => !isPrivate || isMember ? handleNavigation(`/teams/${t._id}`) : undefined}
+                              >
+                                <div className="flex items-center space-x-4 mb-4">
+                                  <img
+                                    src={t.avatar || '/default-team.png'}
+                                    alt={t.name}
+                                    className="w-16 h-16 rounded-full object-cover"
+                                  />
+                                  <div>
+                                    <h3 className="text-lg font-bold text-white">{t.name}</h3>
+                                    <p className="text-white/60">{t.memberCount || (t.members ? t.members.length : 0)} members</p>
+                                  </div>
+                                </div>
+                                <p className="text-white/80 text-sm mb-4">{t.description}</p>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-wrap gap-2">
+                                    {(t.tags || []).slice(0, 3).map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  {!isPrivate || isMember ? (
+                                    <FiArrowRight className="text-white/40" />
+                                  ) : (
+                                    <button
+                                      className="px-3 py-1 bg-blue-600 text-white rounded-full text-xs hover:bg-blue-700 transition-all disabled:opacity-50"
+                                      disabled={actionLoading === t._id}
+                                      onClick={e => { e.stopPropagation(); requestToJoinTeam(t._id); }}
+                                    >
+                                      {actionLoading === t._id ? 'Requesting...' : 'Request to Join'}
+                                    </button>
+                                  )}
+                                </div>
+                                {isPrivate && !isMember && (
+                                  <div className="mt-2 text-xs text-white/60">Private team: Only limited info visible</div>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    ))}
+                    )}
+                    {/* Posts Section */}
+                    {filteredResults.posts.length > 0 && (
+                      <div>
+                        <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                          <FiFileText className="mr-2" />
+                          Posts ({filteredResults.posts.length})
+                        </h2>
+                        <div className="space-y-6">
+                          {filteredResults.posts.map((post) => (
+                            <motion.div
+                              key={post._id}
+                              whileHover={{ y: -2 }}
+                              className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all"
+                              onClick={() => handleNavigation(`/feed/post/${post._id}`)}
+                            >
+                              <div className="flex items-start space-x-4">
+                                <img
+                                  src={post.author?.profilePicture || '/default-avatar.png'}
+                                  alt={post.author?.name || post.author?.username}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <h3 className="text-lg font-bold text-white">{post.title}</h3>
+                                    <span className="text-white/40">by {post.author?.name || post.author?.username}</span>
+                                  </div>
+                                  <p className="text-white/80 text-sm mb-4">{post.content}</p>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-6 text-white/60 text-sm">
+                                      <span className="flex items-center">
+                                        <FiEye className="mr-1" />
+                                        {post.likes?.length || 0}
+                                      </span>
+                                      <span className="flex items-center">
+                                        <FiMessageSquare className="mr-1" />
+                                        {post.comments?.length || 0}
+                                      </span>
+                                      <span className="flex items-center">
+                                        <FiCalendar className="mr-1" />
+                                        {new Date(post.createdAt).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {(post.tags || []).slice(0, 3).map((tag) => (
+                                        <span
+                                          key={tag}
+                                          className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full"
+                                        >
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-center text-neutral-400">No posts found.</div>
-                )
-              ) : (
-                <div className="text-center text-neutral-400">Post search results will appear here.</div>
-              )}
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {/* Initial State */}
+          {!hasSearched && (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🌟</div>
+              <h3 className="text-2xl font-bold text-white mb-2">Start Exploring</h3>
+              <p className="text-white/60 max-w-md mx-auto">
+                Search for users, teams, or posts to discover amazing content and connect with others
+              </p>
             </div>
           )}
         </div>
       </div>
     </div>
   );
-} 
+};
+
+export default Explore; 

@@ -404,6 +404,148 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// --- User Search ---
+const searchUsers = async (req, res) => {
+  try {
+    const { query, page = 1, limit = 10 } = req.query;
+    if (!query || !query.trim()) {
+      return res.status(400).json({ success: false, message: 'Query is required' });
+    }
+    const regex = new RegExp(query, 'i');
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    // Find users who are public, or are friends with the requester
+    const requester = await User.findById(req.user.id);
+    const friendIds = requester.friends.map(id => id.toString());
+    const users = await User.find({
+      $and: [
+        {
+          $or: [
+            { username: regex },
+            { name: regex },
+            { bio: regex },
+            { skills: regex }
+          ]
+        },
+        {
+          $or: [
+            { isPrivate: false },
+            { _id: { $in: friendIds } },
+            { _id: req.user.id }
+          ]
+        }
+      ]
+    })
+      .select('-password -verificationToken -resetPasswordToken -resetPasswordExpires')
+      .skip(skip)
+      .limit(parseInt(limit));
+    const total = await User.countDocuments({
+      $and: [
+        {
+          $or: [
+            { username: regex },
+            { name: regex },
+            { bio: regex },
+            { skills: regex }
+          ]
+        },
+        {
+          $or: [
+            { isPrivate: false },
+            { _id: { $in: friendIds } },
+            { _id: req.user.id }
+          ]
+        }
+      ]
+    });
+    res.json({
+      success: true,
+      users,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(total / limit),
+      totalUsers: total
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error searching users', error: error.message });
+  }
+};
+
+// --- Friend Request Logic ---
+const sendFriendRequest = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId || userId === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+    const user = await User.findById(userId);
+    const requester = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.friends.includes(req.user.id)) {
+      return res.status(400).json({ success: false, message: 'Already friends' });
+    }
+    if (user.friendRequests.includes(req.user.id)) {
+      return res.status(400).json({ success: false, message: 'Request already sent' });
+    }
+    user.friendRequests.push(req.user.id);
+    await user.save();
+    res.json({ success: true, message: 'Friend request sent' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error sending friend request', error: error.message });
+  }
+};
+
+const acceptFriendRequest = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId || userId === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+    const user = await User.findById(req.user.id);
+    const requester = await User.findById(userId);
+    if (!user || !requester) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user.friendRequests.includes(userId)) {
+      return res.status(400).json({ success: false, message: 'No such friend request' });
+    }
+    // Add each other as friends
+    user.friends.push(userId);
+    requester.friends.push(req.user.id);
+    // Remove request
+    user.friendRequests = user.friendRequests.filter(id => id.toString() !== userId);
+    await user.save();
+    await requester.save();
+    res.json({ success: true, message: 'Friend request accepted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error accepting friend request', error: error.message });
+  }
+};
+
+const declineFriendRequest = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId || userId === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user.friendRequests.includes(userId)) {
+      return res.status(400).json({ success: false, message: 'No such friend request' });
+    }
+    user.friendRequests = user.friendRequests.filter(id => id.toString() !== userId);
+    await user.save();
+    res.json({ success: true, message: 'Friend request declined' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error declining friend request', error: error.message });
+  }
+};
+
+const listFriendRequests = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate('friendRequests', 'username name profilePicture');
+    res.json({ success: true, friendRequests: user.friendRequests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error listing friend requests', error: error.message });
+  }
+};
+
 // ✅ Export all controllers
 module.exports = {
   register,
@@ -413,5 +555,10 @@ module.exports = {
   deleteAccount,
   verifyEmail,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  searchUsers,
+  sendFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+  listFriendRequests
 };

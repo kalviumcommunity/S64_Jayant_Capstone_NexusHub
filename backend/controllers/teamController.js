@@ -378,83 +378,73 @@ exports.addMember = async (req, res) => {
 // Request to join a team
 exports.requestToJoin = async (req, res) => {
   try {
-    const { message } = req.body;
-    const teamId = req.params.id;
-    
-    const team = await Team.findById(teamId);
-    
-    if (!team) {
-      return res.status(404).json({
-        success: false,
-        message: 'Team not found'
-      });
+    const team = await Team.findById(req.params.id);
+    if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
+    if (team.isPublic) return res.status(400).json({ success: false, message: 'Team is public, you can join directly' });
+    if (team.members.some(m => m.user.toString() === req.user.id)) {
+      return res.status(400).json({ success: false, message: 'Already a member' });
     }
-    
-    // If team is public, add user directly
-    if (team.isPublic) {
-      // Check if user is already a member
-      const isMember = team.members.some(member => 
-        member.user.toString() === req.user._id.toString()
-      );
-      
-      if (isMember) {
-        return res.status(400).json({
-          success: false,
-          message: 'You are already a member of this team'
-        });
-      }
-      
-      // Add user as a member
-      team.members.push({
-        user: req.user._id,
-        role: 'member'
-      });
-      
-      await team.save();
-      
-      return res.status(200).json({
-        success: true,
-        message: 'You have joined the team successfully',
-        data: team
-      });
+    if (team.joinRequests.includes(req.user.id)) {
+      return res.status(400).json({ success: false, message: 'Already requested' });
     }
-    
-    // For private teams, create a join request
-    
-    // Check if user already has a pending request
-    const hasPendingRequest = team.joinRequests.some(request => 
-      request.user.toString() === req.user._id.toString()
-    );
-    
-    if (hasPendingRequest) {
-      return res.status(400).json({
-        success: false,
-        message: 'You already have a pending request to join this team'
-      });
-    }
-    
-    // Add join request
-    team.joinRequests.push({
-      user: req.user._id,
-      message: message || ''
-    });
-    
+    team.joinRequests.push(req.user.id);
     await team.save();
-    
-    res.status(200).json({
-      success: true,
-      message: 'Join request sent successfully',
-      data: {
-        teamId: team._id,
-        teamName: team.name
-      }
-    });
+    res.json({ success: true, message: 'Join request sent' });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to request team join',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Error sending join request', error: error.message });
+  }
+};
+
+exports.acceptJoinRequest = async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.id);
+    const { userId } = req.body;
+    if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
+    if (team.owner.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Only the team owner can accept requests' });
+    }
+    if (!team.joinRequests.includes(userId)) {
+      return res.status(400).json({ success: false, message: 'No such join request' });
+    }
+    // Add as member
+    team.members.push({ user: userId, role: 'member' });
+    team.joinRequests = team.joinRequests.filter(id => id.toString() !== userId);
+    await team.save();
+    res.json({ success: true, message: 'Join request accepted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error accepting join request', error: error.message });
+  }
+};
+
+exports.declineJoinRequest = async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.id);
+    const { userId } = req.body;
+    if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
+    if (team.owner.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Only the team owner can decline requests' });
+    }
+    if (!team.joinRequests.includes(userId)) {
+      return res.status(400).json({ success: false, message: 'No such join request' });
+    }
+    team.joinRequests = team.joinRequests.filter(id => id.toString() !== userId);
+    await team.save();
+    res.json({ success: true, message: 'Join request declined' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error declining join request', error: error.message });
+  }
+};
+
+exports.listJoinRequests = async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.id).populate('joinRequests', 'username name profilePicture');
+    if (!team) return res.status(404).json({ success: false, message: 'Team not found' });
+    if (team.owner.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Only the team owner can view join requests' });
+    }
+    res.json({ success: true, joinRequests: team.joinRequests });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error listing join requests', error: error.message });
   }
 };
 

@@ -55,7 +55,21 @@ const userSchema = new mongoose.Schema({
   lastActive: {
     type: Date,
     default: Date.now
-  }
+  },
+  isPrivate: {
+    type: Boolean,
+    default: false
+  },
+  friends: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }],
+  friendRequests: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }]
 }, { 
   timestamps: true 
 });

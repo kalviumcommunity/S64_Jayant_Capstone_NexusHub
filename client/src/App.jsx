@@ -16,12 +16,10 @@ import CreatePost from './pages/CreatePost'
 import TeamPage from './pages/TeamPage'
 import OAuthSuccess from './pages/OAuthSuccess'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import SidebarLayout from './components/ui/SidebarLayout'
 import Explore from './pages/Explore'
 
 import { AuthProvider } from './context/AuthContext.jsx'
 import { TaskProvider } from './context/TaskContext.jsx'
-import { initializePageTransition, pageTransition } from './utils/pageTransitions'
 import './styles/pageTransitions.css'
 
 const AppContent = () => {
@@ -29,53 +27,6 @@ const AppContent = () => {
   const navigate = useNavigate();
   const isAuthPage = ['/login', '/signup', '/profile', '/oauth-success'].includes(location.pathname);
   
-  // Initialize page transition system once
-  useEffect(() => {
-    // Only initialize transitions if not on auth pages
-    if (!isAuthPage) {
-      initializePageTransition();
-    }
-    
-    // No transition animation for initial load
-    
-    return () => {
-      // No cleanup needed
-    };
-  }, [isAuthPage]);
-  
-  // Handle route changes
-  useEffect(() => {
-    // This effect runs on location changes after the initial render
-    // If navigating to or from auth pages, ensure transitions are disabled
-    const container = document.querySelector('.transition-container');
-    if (container && isAuthPage) {
-      container.style.display = 'none';
-    }
-  }, [location.pathname, isAuthPage]);
-
-  // Custom Link component with transition
-  const TransitionLink = ({ to, children, className }) => {
-    const handleClick = (e) => {
-      e.preventDefault();
-      
-      // Skip transitions for login and signup pages
-      if (to === '/login' || to === '/signup' || ['/login', '/signup'].includes(location.pathname)) {
-        navigate(to);
-      } else {
-        pageTransition.navigate(navigate, to);
-      }
-    };
-    
-    return (
-      <a href={to} onClick={handleClick} className={className}>
-        {children}
-      </a>
-    );
-  };
-
-  // Make TransitionLink available globally
-  window.TransitionLink = TransitionLink;
-
   return (
     <div className='relative min-h-screen w-screen overflow-x-hidden'>
       {!isAuthPage && <Navbar />}
@@ -96,17 +47,15 @@ const AppContent = () => {
             </>
           } />
           
-          {/* Protected Routes with SidebarLayout */}
+          {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
-            <Route element={<SidebarLayout />}>
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/feed" element={<Feed />} />
-              <Route path="/create-post" element={<CreatePost />} />
-              <Route path="/teams/:teamId" element={<TeamPage />} />
-              <Route path="/explore" element={<Explore />} />
-              {/* Add other protected routes here */}
-            </Route>
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/feed" element={<Feed />} />
+            <Route path="/create-post" element={<CreatePost />} />
+            <Route path="/teams/:teamId" element={<TeamPage />} />
+            <Route path="/explore" element={<Explore />} />
+            {/* Add other protected routes here */}
           </Route>
         </Routes>
       </main>
@@ -116,12 +65,8 @@ const AppContent = () => {
 };
 
 const App = () => {
-  // We'll let AppContent handle the transition initialization
-  // This ensures we can check the current route before initializing
   useEffect(() => {
     console.log("App component mounted");
-    // No longer initializing page transition here
-    // It will be handled in AppContent based on the current route
   }, []);
 
   return (

@@ -31,18 +31,9 @@ const teamSchema = new mongoose.Schema({
     }
   }],
   joinRequests: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
-    },
-    requestedAt: {
-      type: Date,
-      default: Date.now
-    },
-    message: {
-      type: String,
-      default: ''
-    }
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
   }],
   projects: [{
     type: mongoose.Schema.Types.ObjectId,

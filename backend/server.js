@@ -54,7 +54,7 @@ if (!fs.existsSync('uploads/profile-images')) {
 app.use(passport.initialize());
 
 // Routes
-app.use("/api/auth", userRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/oauth", oauthRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);

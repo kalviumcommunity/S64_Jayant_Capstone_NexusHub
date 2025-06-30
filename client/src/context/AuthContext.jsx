@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       
       // Fetch user data
-      const response = await api.get('/auth/profile');
+      const response = await api.get('/users/profile');
       setUser(response.data.user);
       
       // Save user data
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
           initializeSocket(token);
           
           // Verify token by getting user profile
-          const response = await api.get('/auth/profile');
+          const response = await api.get('/users/profile');
           setUser(response.data.user);
         }
       } catch (err) {
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post('/auth/register', userData);
+      const response = await api.post('/users/register', userData);
       
       // Save token and user data
       localStorage.setItem('token', response.data.token);
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post('/auth/login', credentials);
+      const response = await api.post('/users/login', credentials);
       
       // Save token and user data
       const token = response.data.token;
@@ -126,14 +126,14 @@ export const AuthProvider = ({ children }) => {
       
       if (profileData instanceof FormData) {
         // If FormData is passed, use it directly
-        response = await api.put('/auth/profile', profileData, {
+        response = await api.put('/users/profile', profileData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         });
       } else {
         // Regular JSON data
-        response = await api.put('/auth/profile', profileData);
+        response = await api.put('/users/profile', profileData);
       }
       
       // Update stored user data
@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post('/auth/forgot-password', { email });
+      const response = await api.post('/users/forgot-password', { email });
       return response.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Password reset request failed');
@@ -169,7 +169,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post(`/auth/reset-password/${token}`, { password });
+      const response = await api.post(`/users/reset-password/${token}`, { password });
       return response.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Password reset failed');
