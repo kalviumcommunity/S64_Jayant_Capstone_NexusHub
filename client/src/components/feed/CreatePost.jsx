@@ -2,6 +2,10 @@ import React, { useState, useRef } from 'react';
 import { useFeed } from '../../context/FeedContext';
 import { useAuth } from '../../context/AuthContext';
 import { FiImage, FiVideo, FiFile, FiX, FiUsers, FiLock, FiGlobe, FiTag } from 'react-icons/fi';
+import { uploadMedia } from '../../utils/uploadMedia';
+
+const MAX_MEDIA = 10;
+const MAX_VIDEO_DURATION = 30; // seconds
 
 const CreatePost = () => {
   const { createPost } = useFeed();
@@ -15,6 +19,7 @@ const CreatePost = () => {
   const [tagInput, setTagInput] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
   const [showVisibilityDropdown, setShowVisibilityDropdown] = useState(false);
+  const [error, setError] = useState('');
   const fileInputRef = useRef(null);
   const visibilityDropdownRef = useRef(null);
   
@@ -37,24 +42,55 @@ const CreatePost = () => {
     setContent(e.target.value);
   };
 
-  // Handle file selection
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
+  // Handle file selection with validation
+  const handleFileChange = async (e) => {
+    setError('');
+    let files = Array.from(e.target.files);
     if (files.length === 0) return;
+    // Check max files
+    if (mediaFiles.length + files.length > MAX_MEDIA) {
+      setError(`You can upload a maximum of ${MAX_MEDIA} media files per post.`);
+      return;
+    }
+    // Validate each file
+    const validFiles = [];
+    const validPreviews = [];
+    for (const file of files) {
+      if (file.type.startsWith('video/')) {
+        // Check video duration before adding
+        const url = URL.createObjectURL(file);
+        const duration = await getVideoDuration(url);
+        if (duration > MAX_VIDEO_DURATION) {
+          setError(`Video "${file.name}" is longer than 30 seconds and will not be added.`);
+          URL.revokeObjectURL(url);
+          continue;
+        }
+        validFiles.push(file);
+        validPreviews.push({ file, url, type: 'video', name: file.name });
+      } else {
+        // Image or document
+        const url = URL.createObjectURL(file);
+        validFiles.push(file);
+        validPreviews.push({ file, url, type: file.type.startsWith('image/') ? 'image' : 'document', name: file.name });
+      }
+    }
+    setMediaFiles([...mediaFiles, ...validFiles]);
+    setMediaPreview([...mediaPreview, ...validPreviews]);
+  };
 
-    // Create preview URLs for selected files
-    const newPreviews = files.map(file => {
-      return {
-        file,
-        url: URL.createObjectURL(file),
-        type: file.type.startsWith('image/') ? 'image' : 
-              file.type.startsWith('video/') ? 'video' : 'document',
-        name: file.name
+  // Helper to get video duration
+  const getVideoDuration = (url) => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = function () {
+        resolve(video.duration);
       };
+      video.onerror = function () {
+        resolve(Infinity); // If error, treat as invalid
+      };
+      video.src = url;
     });
-
-    setMediaFiles([...mediaFiles, ...files]);
-    setMediaPreview([...mediaPreview, ...newPreviews]);
   };
 
   // Remove a selected file
@@ -99,34 +135,36 @@ const CreatePost = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content.trim() && mediaFiles.length === 0) return;
-    
     try {
       setIsSubmitting(true);
-      
-      // Create FormData for file uploads
-      const formData = new FormData();
-      formData.append('content', content);
-      formData.append('visibility', visibility);
-      
-      // Add tags
-      if (tags.length > 0) {
-        formData.append('tags', JSON.stringify(tags));
+      let uploadedMedia = [];
+      // Upload each file to Cloudinary
+      for (const file of mediaFiles) {
+        const url = await uploadMedia(file);
+        let type = 'document';
+        if (file.type.startsWith('image/')) type = 'image';
+        else if (file.type.startsWith('video/')) type = 'video';
+        uploadedMedia.push({
+          type,
+          url,
+          name: file.name,
+          size: file.size
+        });
       }
-      
-      // Add media files
-      mediaFiles.forEach(file => {
-        formData.append('media', file);
-      });
-      
-      await createPost(formData);
-      
+      // Prepare post data
+      const postData = {
+        content: content.trim() ? content : " ",
+        visibility,
+        tags,
+        media: uploadedMedia
+      };
+      await createPost(postData);
       // Reset form
       setContent('');
       setMediaFiles([]);
       setMediaPreview([]);
       setTags([]);
       setVisibility('public');
-      
     } catch (error) {
       console.error('Error creating post:', error);
     } finally {
@@ -161,6 +199,7 @@ const CreatePost = () => {
 
   return (
     <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 mb-6">
+      {error && <div className="text-red-400 mb-2 text-sm font-medium">{error}</div>}
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">
           <img 

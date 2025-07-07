@@ -1,0 +1,76 @@
+.dock-outer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  scrollbar-width: none;
+  /* box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); */
+}
+.dock-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(8, 8, 8, 0.347);
+  border-radius: 1rem;
+  padding: 0.5rem 0.25rem;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(56px);
+}
+.dock-panel.vertical {
+  flex-direction: column;
+  width: auto;
+  padding: 1rem 0.5rem;
+}
+.dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
+}
+.dock-item:focus, .dock-item:hover {
+  background: rgba(255,255,255,0.18);
+  box-shadow: 0 4px 16px 0 rgba(0,0,0,0.12);
+}
+.dock-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.5rem;
+  pointer-events: none;
+}
+.dock-label {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(30,30,30,0.95);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+  margin-left: 0.5rem;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.12);
+}
+.vertical-dock::-webkit-scrollbar {
+  display: none;
+}
+.dock-panel::-webkit-scrollbar {
+  display: none;
+}

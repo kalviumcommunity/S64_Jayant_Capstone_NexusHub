@@ -15,44 +15,39 @@ if (!fs.existsSync(profileImagesDir)) {
   fs.mkdirSync(profileImagesDir, { recursive: true });
 }
 
-// Configure storage
-const storage = multer.diskStorage({
+// Memory storage for profilePicture (for Cloudinary)
+const memoryStorage = multer.memoryStorage();
+const profileUpload = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed!'), false);
+  }
+});
+
+// Disk storage for other files
+const diskStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Determine destination based on file type
-    if (file.fieldname === 'profilePicture') {
-      cb(null, profileImagesDir);
-    } else {
-      cb(null, uploadDir);
-    }
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    // Create unique filename with original extension
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
 });
-
-// File filter to only allow certain file types
-const fileFilter = (req, file, cb) => {
-  // Accept images only
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed!'), false);
-  }
-};
-
-// Create multer upload instance
 const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max file size
-  },
-  fileFilter: fileFilter
+  storage: diskStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed!'), false);
+  }
 });
 
 module.exports = {
   upload,
+  profileUpload,
   profileImagesDir
 };

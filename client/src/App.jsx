@@ -17,6 +17,7 @@ import TeamPage from './pages/TeamPage'
 import OAuthSuccess from './pages/OAuthSuccess'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import Explore from './pages/Explore'
+import ViewProfile from './pages/ViewProfile'
 
 import { AuthProvider } from './context/AuthContext.jsx'
 import { TaskProvider } from './context/TaskContext.jsx'
@@ -55,6 +56,7 @@ const AppContent = () => {
             <Route path="/create-post" element={<CreatePost />} />
             <Route path="/teams/:teamId" element={<TeamPage />} />
             <Route path="/explore" element={<Explore />} />
+            <Route path="/profile/:username" element={<ViewProfile />} />
             {/* Add other protected routes here */}
           </Route>
         </Routes>

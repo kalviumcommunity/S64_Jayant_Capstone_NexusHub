@@ -146,7 +146,7 @@ const PostCard = ({ post }) => {
           <div key={index} className="rounded-lg overflow-hidden bg-white/5">
             {item.type === 'image' ? (
               <img 
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`} 
+                src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`}
                 alt="Post media" 
                 className="w-full h-auto max-h-[400px] object-cover"
                 loading="lazy"
@@ -154,15 +154,15 @@ const PostCard = ({ post }) => {
               />
             ) : item.type === 'video' ? (
               <video 
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`} 
+                src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`}
                 controls 
                 className="w-full h-auto max-h-[400px]"
-                poster={item.thumbnail ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.thumbnail}` : ''}
+                poster={item.thumbnail ? (item.thumbnail.startsWith('http') ? item.thumbnail : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.thumbnail}`) : ''}
                 onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
               />
             ) : (
               <a 
-                href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`} 
+                href={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`}
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="block p-4 bg-white/5 hover:bg-white/10 transition-colors"
@@ -209,7 +209,11 @@ const PostCard = ({ post }) => {
           <Link to={`/profile/${post.author._id}`} className="flex-shrink-0 group">
             <div className="relative">
               <img 
-                src={post.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}` : '/img/default-avatar.png'} 
+                src={post.author.profilePicture
+                  ? (post.author.profilePicture.startsWith('http')
+                      ? post.author.profilePicture
+                      : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}`)
+                  : '/img/default-avatar.png'} 
                 alt={post.author.name} 
                 className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/50 group-hover:border-purple-500 transition-all duration-300"
                 onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
@@ -296,7 +300,11 @@ const PostCard = ({ post }) => {
               <Link to={`/profile/${post.sharedPost.author._id}`} className="flex-shrink-0 group">
                 <div className="relative">
                   <img 
-                    src={post.sharedPost.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.sharedPost.author.profilePicture}` : '/img/default-avatar.png'} 
+                    src={post.sharedPost.author.profilePicture
+                      ? (post.sharedPost.author.profilePicture.startsWith('http')
+                          ? post.sharedPost.author.profilePicture
+                          : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.sharedPost.author.profilePicture}`)
+                      : '/img/default-avatar.png'} 
                     alt={post.sharedPost.author.name} 
                     className="w-9 h-9 rounded-full object-cover border border-purple-500/50 group-hover:border-purple-500 transition-all duration-300"
                     onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
@@ -319,7 +327,7 @@ const PostCard = ({ post }) => {
                   <div key={index} className="rounded-lg overflow-hidden bg-[#222] shadow-md">
                     {item.type === 'image' ? (
                       <img 
-                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`} 
+                        src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`}
                         alt="Shared post media" 
                         className="w-full h-auto max-h-[200px] object-cover hover:scale-105 transition-transform duration-300"
                         loading="lazy"
@@ -327,7 +335,7 @@ const PostCard = ({ post }) => {
                       />
                     ) : item.type === 'video' ? (
                       <video 
-                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`} 
+                        src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`}
                         controls 
                         className="w-full h-auto max-h-[200px]"
                         onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
@@ -421,7 +429,11 @@ const PostCard = ({ post }) => {
               <div className="bg-[#1A1A1A] rounded-lg p-4 mb-5 border border-[#333]">
                 <div className="flex items-center">
                   <img 
-                    src={post.author.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}` : '/img/default-avatar.png'} 
+                    src={post.author.profilePicture
+                      ? (post.author.profilePicture.startsWith('http')
+                          ? post.author.profilePicture
+                          : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}`)
+                      : '/img/default-avatar.png'} 
                     alt={post.author.name} 
                     className="w-10 h-10 rounded-full object-cover border border-purple-500/30"
                     onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}

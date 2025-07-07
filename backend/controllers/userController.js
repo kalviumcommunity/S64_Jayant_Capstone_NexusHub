@@ -6,6 +6,8 @@ const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
 const path = require("path");
 const fs = require("fs");
+const cloudinary = require('../config/cloudinary');
+const streamifier = require('streamifier');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -177,17 +179,22 @@ const updateProfile = async (req, res) => {
 
     // Handle profile picture if it's in the request
     if (req.file) {
-      // If user already has a profile picture that's not the default, delete it
-      if (user.profilePicture && user.profilePicture !== 'default-avatar.png' && !user.profilePicture.includes('http')) {
-        const oldPicturePath = path.join(__dirname, '../uploads/profile-images', path.basename(user.profilePicture));
-        if (fs.existsSync(oldPicturePath)) {
-          fs.unlinkSync(oldPicturePath);
-        }
-      }
-      
-      // Set the new profile picture path
-      const profilePicturePath = `/uploads/profile-images/${req.file.filename}`;
-      user.profilePicture = profilePicturePath;
+      // If user already has a profile picture that's not the default and is a Cloudinary URL, optionally delete it from Cloudinary (not required for now)
+      // Upload new profile picture to Cloudinary
+      const uploadToCloudinary = (buffer, folder) => {
+        return new Promise((resolve, reject) => {
+          let cld_upload_stream = cloudinary.uploader.upload_stream(
+            { folder },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(buffer).pipe(cld_upload_stream);
+        });
+      };
+      const result = await uploadToCloudinary(req.file.buffer, 'profile-images');
+      user.profilePicture = result.secure_url;
     }
 
     // Update user fields if provided
@@ -546,6 +553,66 @@ const listFriendRequests = async (req, res) => {
   }
 };
 
+// --- Get User by Username (Public Profile) ---
+const getUserByUsername = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const user = await User.findOne({ username }).select('-password -verificationToken -resetPasswordToken -resetPasswordExpires');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // Count teams and posts
+    const Team = require('../models/teamModel');
+    const Post = require('../models/postModel');
+    const [teamCount, postCount] = await Promise.all([
+      Team.countDocuments({ 'members.user': user._id }),
+      Post.countDocuments({ author: user._id })
+    ]);
+
+    // Check if requester is a friend
+    let isFriend = false;
+    let isSelf = false;
+    if (req.user) {
+      isSelf = user._id.toString() === req.user.id;
+      isFriend = user.friends.map(id => id.toString()).includes(req.user.id);
+    }
+
+    // If private and not friend/self, return limited info
+    if (user.isPrivate && !isFriend && !isSelf) {
+      return res.json({
+        success: true,
+        user: {
+          _id: user._id,
+          username: user.username,
+          name: user.name,
+          profilePicture: user.profilePicture,
+          bio: user.bio,
+          skills: user.skills,
+          isPrivate: true,
+          teamCount,
+          friendCount: user.friends.length,
+          postCount
+        },
+        limited: true
+      });
+    }
+
+    // Public or friend/self: return full info
+    return res.json({
+      success: true,
+      user: {
+        ...user.toObject(),
+        isPrivate: !!user.isPrivate,
+        teamCount,
+        friendCount: user.friends.length,
+        postCount
+      },
+      limited: false
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching user profile', error: error.message });
+  }
+};
+
 // ✅ Export all controllers
 module.exports = {
   register,
@@ -560,5 +627,6 @@ module.exports = {
   sendFriendRequest,
   acceptFriendRequest,
   declineFriendRequest,
-  listFriendRequests
+  listFriendRequests,
+  getUserByUsername,
 };

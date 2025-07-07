@@ -191,7 +191,9 @@ const NavBar = () => {
                         <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-purple-500/50">
                           {user?.profilePicture ? (
                             <img 
-                              src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.profilePicture}`}
+                              src={user.profilePicture.startsWith('http')
+                                ? user.profilePicture
+                                : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.profilePicture}`}
                               alt={user.name}
                               className="w-full h-full object-cover"
                             />

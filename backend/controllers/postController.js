@@ -1,45 +1,62 @@
 const Post = require('../models/postModel');
 const User = require('../models/userModel');
 const { getIO } = require('../socket');
+const cloudinary = require('../config/cloudinary');
+const streamifier = require('streamifier');
+
+// Helper to upload buffer to Cloudinary
+const uploadToCloudinary = (buffer, mimetype, folder = 'nexushub_posts') => {
+  return new Promise((resolve, reject) => {
+    let cld_upload_stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: mimetype.startsWith('video/') ? 'video' : 'auto',
+      },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(cld_upload_stream);
+  });
+};
 
 // Create post
 exports.createPost = async (req, res) => {
   try {
     const { content, tags, visibility, project, location } = req.body;
-    
-    // Process uploaded files
-    const mediaFiles = [];
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        // Determine file type
-        let fileType = 'document';
-        if (file.mimetype.startsWith('image/')) {
-          fileType = 'image';
-        } else if (file.mimetype.startsWith('video/')) {
-          fileType = 'video';
-        }
-        
-        // Create media object
-        mediaFiles.push({
-          type: fileType,
-          url: `/uploads/${file.filename}`,
-          name: file.originalname,
-          size: file.size
-        });
-      }
+    // Enforce max 10 files
+    if (req.files && req.files.length > 10) {
+      return res.status(400).json({ success: false, message: 'Max 10 media files allowed per post.' });
     }
-
+    // Upload all media to Cloudinary
+    let mediaFiles = [];
+    if (req.files && req.files.length > 0) {
+      mediaFiles = await Promise.all(req.files.map(async (file) => {
+        // For video, check duration (if possible)
+        if (file.mimetype.startsWith('video/')) {
+          // Use ffprobe or similar to check duration (not implemented here, but should be in production)
+          // For now, skip duration check (frontend should enforce)
+        }
+        const result = await uploadToCloudinary(file.buffer, file.mimetype);
+        return {
+          type: file.mimetype.startsWith('image/') ? 'image' : file.mimetype.startsWith('video/') ? 'video' : 'document',
+          url: result.secure_url,
+          name: file.originalname,
+          size: file.size,
+          public_id: result.public_id,
+        };
+      }));
+    }
     // Parse tags if they come as a string
     let parsedTags = tags || [];
     if (typeof tags === 'string') {
       try {
         parsedTags = JSON.parse(tags);
       } catch (e) {
-        // If not valid JSON, split by comma
         parsedTags = tags.split(',').map(tag => tag.trim());
       }
     }
-
     const post = await Post.create({
       author: req.user._id,
       content,
@@ -49,15 +66,11 @@ exports.createPost = async (req, res) => {
       project: project || null,
       location: location || null
     });
-
     await post.populate('author', 'name email profilePicture');
     if (project) {
       await post.populate('project', 'title');
     }
-
-    // Emit new post to followers
     getIO().emit('new_post', post);
-
     res.status(201).json({
       success: true,
       post

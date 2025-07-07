@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../styles/transitions.css';
 import { useAuth } from '../context/AuthContext.jsx';
 import { pixelTransition } from '../utils/pixelTransition';
+import { Switch } from '@headlessui/react';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -13,12 +14,14 @@ const Profile = () => {
   const fileInputRef = useRef(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [accountType, setAccountType] = useState(user?.isPrivate !== false ? 'Private' : 'Public');
+  const [skillInput, setSkillInput] = useState('');
   
   const defaultProfile = {
-    name: 'John Doe',
-    title: 'Professional Developer',
-    about: 'Full-stack developer with expertise in React, Node.js, and cloud technologies. Passionate about creating beautiful and functional web applications.',
-    skills: ['React', 'Node.js', 'TypeScript', 'AWS', 'UI/UX', 'GraphQL']
+    name: '',
+    title: '',
+    about: '',
+    skills: []
   };
 
   const [profileData, setProfileData] = useState(defaultProfile);
@@ -43,6 +46,7 @@ const Profile = () => {
           ? user.profilePicture 
           : `http://localhost:5000${user.profilePicture}`);
       }
+      setAccountType(user?.isPrivate !== false ? 'Private' : 'Public');
     }
 
     // No need for manual transition handling
@@ -82,19 +86,29 @@ const Profile = () => {
     if (updateError) setUpdateError('');
   };
 
-  const handleSkillsChange = (e) => {
-    // Split by comma and trim each skill to remove leading/trailing whitespace
-    // This preserves spaces within each skill name
-    const skills = e.target.value.split(',').map(skill => skill.trim()).filter(skill => skill !== '');
-    setProfileData(prev => ({
-      ...prev,
-      skills
-    }));
-    
-    // Clear error when user starts typing
+  const handleSkillInputChange = (e) => {
+    setSkillInput(e.target.value);
     if (updateError) setUpdateError('');
   };
-  
+
+  const handleSkillInputKeyDown = (e) => {
+    if ((e.key === 'Enter' || e.key === ',') && skillInput.trim()) {
+      e.preventDefault();
+      const newSkill = skillInput.trim();
+      if (newSkill && !profileData.skills.includes(newSkill)) {
+        setProfileData(prev => ({ ...prev, skills: [...prev.skills, newSkill] }));
+      }
+      setSkillInput('');
+    } else if (e.key === 'Backspace' && !skillInput && profileData.skills.length > 0) {
+      // Remove last skill
+      setProfileData(prev => ({ ...prev, skills: prev.skills.slice(0, -1) }));
+    }
+  };
+
+  const handleRemoveSkill = (skill) => {
+    setProfileData(prev => ({ ...prev, skills: prev.skills.filter(s => s !== skill) }));
+  };
+
   const handleImageClick = () => {
     // Trigger file input click
     fileInputRef.current.click();
@@ -112,6 +126,10 @@ const Profile = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleAccountTypeToggle = () => {
+    setAccountType(prev => (prev === 'Private' ? 'Public' : 'Private'));
   };
 
   const handleSaveChanges = async () => {
@@ -133,13 +151,15 @@ const Profile = () => {
         if (profileData.skills && profileData.skills.length > 0) {
           updateData.append('skills', JSON.stringify(profileData.skills));
         }
+        updateData.append('isPrivate', accountType === 'Private');
       } else {
         // Regular JSON data if no image
         updateData = {
           name: profileData.name,
           bio: profileData.about,
           title: profileData.title,
-          skills: profileData.skills
+          skills: profileData.skills,
+          isPrivate: accountType === 'Private',
         };
       }
       
@@ -199,33 +219,25 @@ const Profile = () => {
                       className="w-full h-full rounded-2xl object-cover"
                     />
                   ) : (
-                    <span className="text-3xl text-white font-bold">
-                      {profileData.name.charAt(0)}
-                    </span>
+                    <span className="text-4xl text-white font-bold">{profileData.name.charAt(0)}</span>
                   )}
                 </div>
               </div>
               <div>
-                <h1 className="text-4xl font-zentry font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                  {profileData.name}
-                </h1>
-                <p className="text-white/60 font-robert-regular mt-1">{profileData.title}</p>
-                <p className="text-white/40 text-sm mt-1">{user?.email}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-3xl font-extrabold text-white font-display tracking-tight drop-shadow-lg">{profileData.name}</h1>
+                </div>
+                <div className="text-lg text-purple-300 font-semibold mb-1">{profileData.title}</div>
+                <div className="text-gray-400 text-sm">{user?.email}</div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-gray-300 font-medium">Account Type:</span>
+                  <span className={`ml-1 text-sm font-bold ${accountType === 'Public' ? 'text-green-400' : 'text-red-400'}`}>{accountType}</span>
+                </div>
               </div>
             </div>
             <div className="flex gap-4">
-              <button 
-                onClick={handleEditProfile}
-                className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-robert-medium hover:bg-white/10 transition-all"
-              >
-                Edit Profile
-              </button>
-              <button 
-                onClick={handleLogout}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
-              >
-                Logout
-              </button>
+              <button onClick={handleEditProfile} className="px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white font-semibold shadow hover:from-purple-700 hover:to-blue-600 transition">Edit Profile</button>
+              <button onClick={handleLogout} className="px-6 py-2 rounded-full bg-gray-800 text-white font-semibold shadow hover:bg-gray-700 transition">Logout</button>
             </div>
           </div>
 
@@ -235,7 +247,9 @@ const Profile = () => {
             <div className="space-y-6">
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                 <h3 className="text-lg font-robert-medium text-white mb-4">About</h3>
-                <p className="text-white/60 font-robert-regular">{profileData.about}</p>
+                <p className="text-white/60 font-robert-regular">
+                  {profileData.about ? profileData.about : 'No about info available.'}
+                </p>
               </div>
 
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
@@ -258,22 +272,21 @@ const Profile = () => {
             <div className="md:col-span-2 space-y-6">
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                 <h3 className="text-lg font-robert-medium text-white mb-4">Recent Projects</h3>
-                <div className="space-y-4">
-                  {[1, 2, 3].map((project) => (
-                    <div
-                      key={project}
-                      className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-white font-robert-medium">Project {project}</h4>
-                        <span className="text-white/40 text-sm">2 days ago</span>
+                {user?.projects && user.projects.length > 0 ? (
+                  <div className="space-y-4">
+                    {user.projects.map((project, idx) => (
+                      <div key={project._id || idx} className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-white font-robert-medium">{project.name || 'Untitled Project'}</h4>
+                          <span className="text-white/40 text-sm">{project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : ''}</span>
+                        </div>
+                        <p className="text-white/60 text-sm mt-2">{project.description || 'No description.'}</p>
                       </div>
-                      <p className="text-white/60 text-sm mt-2">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-white/60 text-sm">No projects yet.</div>
+                )}
               </div>
             </div>
           </div>
@@ -282,124 +295,87 @@ const Profile = () => {
 
       {/* Edit Profile Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseModal} />
-          <div className="relative bg-[#1A1A1A] rounded-2xl p-8 w-full max-w-2xl mx-4 border border-white/10">
-            <h2 className="text-2xl font-zentry font-bold text-white mb-6">Edit Profile</h2>
-            
-            {updateError && (
-              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200 text-sm">
-                {updateError}
-              </div>
-            )}
-            
-            <div className="space-y-4">
-              {/* Profile Picture Upload */}
-              <div>
-                <label className="block text-white/80 font-robert-medium mb-2">Profile Picture</label>
-                <div className="flex items-center gap-4">
-                  <div 
-                    onClick={handleImageClick}
-                    className="w-24 h-24 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 p-1 cursor-pointer hover:from-purple-600 hover:to-blue-600 transition-all"
-                  >
-                    <div className="w-full h-full rounded-xl bg-black/40 backdrop-blur-sm flex items-center justify-center relative">
-                      {previewImage ? (
-                        <img 
-                          src={previewImage} 
-                          alt="Profile Preview" 
-                          className="w-full h-full rounded-xl object-cover"
-                        />
-                      ) : (
-                        <span className="text-3xl text-white font-bold">
-                          {profileData.name.charAt(0)}
-                        </span>
-                      )}
-                      <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <span className="text-white text-xs font-robert-medium">Change</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-white/60 text-sm">
-                    <p>Click to upload a new profile picture</p>
-                    <p className="mt-1">Recommended: Square image, max 5MB</p>
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-white/80 font-robert-medium mb-2">Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={profileData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
-                  disabled={isUpdating}
-                />
-              </div>
-              <div>
-                <label className="block text-white/80 font-robert-medium mb-2">Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={profileData.title}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
-                  disabled={isUpdating}
-                />
-              </div>
-              <div>
-                <label className="block text-white/80 font-robert-medium mb-2">About</label>
-                <textarea
-                  name="about"
-                  value={profileData.about}
-                  onChange={handleInputChange}
-                  rows="4"
-                  className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
-                  disabled={isUpdating}
-                />
-              </div>
-              <div>
-                <label className="block text-white/80 font-robert-medium mb-2">Skills (comma-separated)</label>
-                <input
-                  type="text"
-                  value={profileData.skills ? profileData.skills.join(', ') : ''}
-                  onChange={handleSkillsChange}
-                  className="w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-purple-500"
-                  placeholder="e.g. React, Node.js, Frontend Development, UI/UX"
-                  disabled={isUpdating}
-                />
-                <p className="mt-1 text-white/50 text-xs">Separate skills with commas. Spaces within skill names are preserved.</p>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#181c2f] rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-8 pt-8 pb-4 border-b border-gray-700 flex items-center justify-between sticky top-0 bg-[#181c2f] z-10">
+              <h2 className="text-2xl font-bold text-white">Edit Profile</h2>
+              <button onClick={handleCloseModal} className="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
-            <div className="flex justify-end gap-4 mt-8">
-              <button
-                onClick={handleCloseModal}
-                className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-robert-medium hover:bg-white/10 transition-all"
-                disabled={isUpdating}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveChanges}
-                disabled={isUpdating}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isUpdating ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Saving...
+            {/* Modal Content (Scrollable) */}
+            <div className="overflow-y-auto px-8 py-6 flex-1 min-h-0">
+              {/* Profile Picture Upload */}
+              <div className="mb-6 flex flex-col items-center">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 p-1 cursor-pointer" onClick={handleImageClick}>
+                  <div className="w-full h-full rounded-2xl bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    {previewImage ? (
+                      <img src={previewImage} alt="Profile Preview" className="w-full h-full rounded-2xl object-cover" />
+                    ) : (
+                      <span className="text-4xl text-white font-bold">{profileData.name.charAt(0)}</span>
+                    )}
                   </div>
-                ) : (
-                  'Save Changes'
-                )}
+                </div>
+                <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageChange} />
+                <span className="text-gray-400 text-xs mt-2">Click to upload a new profile picture<br />Recommended: Square image, max 5MB</span>
+              </div>
+              {/* Name */}
+              <div className="mb-4">
+                <label className="block text-gray-300 mb-1">Name</label>
+                <input type="text" name="name" value={profileData.name} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+              </div>
+              {/* Title */}
+              <div className="mb-4">
+                <label className="block text-gray-300 mb-1">Title</label>
+                <input type="text" name="title" value={profileData.title} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+              </div>
+              {/* About */}
+              <div className="mb-4">
+                <label className="block text-gray-300 mb-1">About</label>
+                <textarea name="about" value={profileData.about} onChange={handleInputChange} rows={4} className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+              </div>
+              {/* Skills */}
+              <div className="mb-4">
+                <label className="block text-gray-300 mb-1">Skills</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {profileData.skills.map((skill, idx) => (
+                    <span key={idx} className="flex items-center px-3 py-1 rounded-lg bg-white/10 text-white/80 text-sm font-robert-regular">
+                      {skill}
+                      <button type="button" className="ml-2 text-red-400 hover:text-red-600" onClick={() => handleRemoveSkill(skill)}>&times;</button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={skillInput}
+                  onChange={handleSkillInputChange}
+                  onKeyDown={handleSkillInputKeyDown}
+                  placeholder="Type a skill and press Enter or Comma"
+                  className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                <span className="text-gray-500 text-xs">Press Enter or comma to add. Spaces within skill names are preserved.</span>
+              </div>
+              {/* Account Type Toggle */}
+              <div className="mb-6 flex items-center gap-3">
+                <span className="text-gray-300 font-medium">Account Type:</span>
+                <Switch
+                  checked={accountType === 'Public'}
+                  onChange={handleAccountTypeToggle}
+                  className={`${accountType === 'Public' ? 'bg-green-500' : 'bg-gray-600'} relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus:outline-none`}
+                >
+                  <span className="sr-only">Toggle Account Type</span>
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${accountType === 'Public' ? 'translate-x-6' : 'translate-x-1'}`}
+                  />
+                </Switch>
+                <span className={`ml-2 text-sm font-bold ${accountType === 'Public' ? 'text-green-400' : 'text-red-400'}`}>{accountType}</span>
+              </div>
+              {updateError && <div className="text-red-400 text-center mb-2">{updateError}</div>}
+            </div>
+            {/* Modal Footer (Sticky) */}
+            <div className="px-8 py-4 border-t border-gray-700 flex justify-end gap-4 sticky bottom-0 bg-[#181c2f] z-10">
+              <button onClick={handleCloseModal} className="px-6 py-2 rounded-full bg-gray-700 text-white font-semibold hover:bg-gray-600 transition">Cancel</button>
+              <button onClick={handleSaveChanges} disabled={isUpdating} className="px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white font-semibold shadow hover:from-purple-700 hover:to-blue-600 transition disabled:opacity-60">
+                {isUpdating ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
