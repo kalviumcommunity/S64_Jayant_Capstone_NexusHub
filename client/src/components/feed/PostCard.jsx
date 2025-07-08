@@ -136,55 +136,91 @@ const PostCard = ({ post }) => {
     }
   };
 
-  // Render media content
-  const renderMedia = () => {
-    if (!post.media || post.media.length === 0) return null;
+  // Utility to get aspect ratio label and value
+  const getAspectRatio = (width, height) => {
+    const ratio = width / height;
+    if (Math.abs(ratio - 1) < 0.05) return { label: '1:1', value: 1 };
+    if (Math.abs(ratio - 0.8) < 0.05) return { label: '4:5', value: 4 / 5 };
+    if (Math.abs(ratio - 16 / 9) < 0.05) return { label: '16:9', value: 16 / 9 };
+    if (Math.abs(ratio - 9 / 16) < 0.05) return { label: '9:16', value: 9 / 16 };
+    // Default to 1:1
+    return { label: '1:1', value: 1 };
+  };
+
+  // Responsive MediaCard component
+  const MediaCard = ({ url, type }) => {
+    const [aspect, setAspect] = React.useState({ label: '1:1', value: 1 });
+    const [loaded, setLoaded] = React.useState(false);
+
+    React.useEffect(() => {
+      if (type === 'image') {
+        const img = new window.Image();
+        img.onload = () => {
+          setAspect(getAspectRatio(img.naturalWidth, img.naturalHeight));
+          setLoaded(true);
+        };
+        img.src = url;
+      } else if (type === 'video') {
+        const video = document.createElement('video');
+        video.onloadedmetadata = () => {
+          setAspect(getAspectRatio(video.videoWidth, video.videoHeight));
+          setLoaded(true);
+        };
+        video.src = url;
+      }
+    }, [url, type]);
+
+    // Desktop sizes
+    const desktopMaxWidth = 600;
+    let height = desktopMaxWidth / aspect.value;
+    // Clamp height for portrait/vertical
+    if (aspect.label === '4:5') height = 750;
+    if (aspect.label === '9:16') height = 1066;
+    if (aspect.label === '16:9') height = 338;
+    if (aspect.label === '1:1') height = 600;
 
     return (
-      <div className={`mt-3 grid ${post.media.length > 1 ? 'grid-cols-2 gap-2' : 'grid-cols-1'}`}>
-        {post.media.map((item, index) => (
-          <div key={index} className="rounded-lg overflow-hidden bg-white/5">
-            {item.type === 'image' ? (
-              <img 
-                src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`}
-                alt="Post media" 
-                className="w-full h-auto max-h-[400px] object-cover"
-                loading="lazy"
-                onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
-              />
-            ) : item.type === 'video' ? (
-              <video 
-                src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`}
-                controls 
-                className="w-full h-auto max-h-[400px]"
-                poster={item.thumbnail ? (item.thumbnail.startsWith('http') ? item.thumbnail : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.thumbnail}`) : ''}
-                onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
-              />
-            ) : (
-              <a 
-                href={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`}
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block p-4 bg-white/5 hover:bg-white/10 transition-colors"
-                onError={e => { e.target.onerror = null; e.target.src = '/img/default-avatar.png'; }}
-              >
-                <div className="flex items-center">
-                  <div className="bg-blue-500/20 p-3 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-white font-medium">{item.name}</p>
-                    <p className="text-white/50 text-sm">{(item.size / 1024 / 1024).toFixed(2)} MB</p>
-                  </div>
-                </div>
-              </a>
-            )}
-          </div>
-        ))}
+      <div
+        className="media-card bg-black flex items-center justify-center mx-auto w-full"
+        style={{
+          maxWidth: desktopMaxWidth,
+          width: '100%',
+          aspectRatio: aspect.value,
+          height: loaded ? height : 0,
+          minHeight: 200,
+          background: 'black',
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: 16,
+          transition: 'height 0.2s',
+        }}
+      >
+        {type === 'image' ? (
+          <img
+            src={url}
+            alt="Post media"
+            className="w-full h-full object-contain bg-black"
+            style={{ aspectRatio: aspect.value, maxHeight: '100%', maxWidth: '100%' }}
+          />
+        ) : type === 'video' ? (
+          <video
+            src={url}
+            controls
+            className="w-full h-full object-contain bg-black"
+            style={{ aspectRatio: aspect.value, maxHeight: '100%', maxWidth: '100%' }}
+          />
+        ) : null}
       </div>
     );
+  };
+
+  // Replace renderMedia with new system
+  const renderMedia = () => {
+    if (!post.media || post.media.length === 0) return null;
+    // Only show first media for now
+    const item = post.media[0];
+    const url = item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${item.url}`;
+    return <MediaCard url={url} type={item.type} />;
   };
 
   // Render visibility icon

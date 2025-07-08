@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: rgba(8, 8, 8, 0.347);
+  background: rgba(8, 8, 8, 0.769);
   border-radius: 1rem;
   padding: 0.5rem 0.25rem;
   transition: background 0.2s, box-shadow 0.2s;
@@ -32,7 +32,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(83, 83, 83, 0.724);
   transition: background 0.2s, box-shadow 0.2s;
   cursor: pointer;
   outline: none;
@@ -57,7 +57,7 @@
   left: 100%;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(30,30,30,0.95);
+  background: rgb(30, 30, 30);
   color: #fff;
   font-size: 0.85rem;
   padding: 0.25rem 0.75rem;

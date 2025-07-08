@@ -6,21 +6,23 @@ import { FiHome, FiSearch, FiEdit, FiBell, FiBookmark, FiUser } from 'react-icon
 import StoriesBar from '../components/StoriesBar';
 import FeedPostList from '../components/FeedPostList';
 import RightSidebar from '../components/RightSidebar';
-
-const dockItems = [
-  { icon: <FiHome size={22} />, label: 'Home', onClick: () => {} },
-  { icon: <FiSearch size={22} />, label: 'Search', onClick: () => {} },
-  { icon: <FiEdit size={22} />, label: 'Create Post', onClick: () => {} },
-  { icon: <FiBell size={22} />, label: 'Notifications', onClick: () => {} },
-  { icon: <FiBookmark size={22} />, label: 'Saved', onClick: () => {} },
-  { icon: <FiUser size={22} />, label: 'Profile', onClick: () => {} },
-];
+import { useNavigate } from 'react-router-dom';
 
 const Feed = () => {
+  const navigate = useNavigate();
+  const dockItems = [
+    { icon: <FiHome size={22} />, label: 'Home', onClick: () => {} },
+    { icon: <FiSearch size={22} />, label: 'Search', onClick: () => {} },
+    { icon: <FiEdit size={22} />, label: 'Create Post', onClick: () => navigate('/create') },
+    { icon: <FiBell size={22} />, label: 'Notifications', onClick: () => {} },
+    { icon: <FiBookmark size={22} />, label: 'Saved', onClick: () => {} },
+    { icon: <FiUser size={22} />, label: 'Profile', onClick: () => {} },
+  ];
+
   return (
     <div className="relative min-h-screen w-full flex pt-20">
       {/* Background Video */}
-      <video className="absolute inset-0 w-full h-full object-cover -z-10" autoPlay muted loop>
+      <video className="absolute inset-0 w-full h-full object-cover opacity-85 -z-10" autoPlay muted loop>
         <source src="/videos/NexusCrystal.mp4" type="video/mp4" />
       </video>
       {/* Layout */}

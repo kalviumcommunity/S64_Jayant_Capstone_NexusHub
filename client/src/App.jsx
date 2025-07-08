@@ -18,6 +18,8 @@ import OAuthSuccess from './pages/OAuthSuccess'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import Explore from './pages/Explore'
 import ViewProfile from './pages/ViewProfile'
+import StoryViewer from './pages/StoryViewer'
+import Create from './pages/Create'
 
 import { AuthProvider } from './context/AuthContext.jsx'
 import { TaskProvider } from './context/TaskContext.jsx'
@@ -54,9 +56,11 @@ const AppContent = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/create-post" element={<CreatePost />} />
+            <Route path="/create" element={<Create />} />
             <Route path="/teams/:teamId" element={<TeamPage />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/profile/:username" element={<ViewProfile />} />
+            <Route path="/story/:id" element={<StoryViewer />} />
             {/* Add other protected routes here */}
           </Route>
         </Routes>

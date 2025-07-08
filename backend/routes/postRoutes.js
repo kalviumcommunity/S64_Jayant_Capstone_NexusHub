@@ -15,7 +15,7 @@ const {
 } = require('../controllers/postController');
 
 router.route('/')
-  .post(protect, upload.array('media', 5), createPost) // Allow up to 5 media files
+  .post(protect, upload.array('media', 10), createPost) // Allow up to 10 media files
   .get(protect, getFeedPosts);
 
 router.get('/search', protect, searchPosts);

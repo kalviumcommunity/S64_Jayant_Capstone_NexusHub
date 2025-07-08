@@ -13,6 +13,7 @@ const messageRoutes = require("./routes/messageRoutes");
 const postRoutes = require("./routes/postRoutes");
 const oauthRoutes = require("./routes/oauthRoutes");
 const activityRoutes = require("./routes/activityRoutes");
+const storyRoutes = require("./routes/storyRoutes");
 const cors = require("cors");
 const { initializeSocket } = require('./socket');
 const passport = require('passport');
@@ -63,6 +64,7 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/activities", activityRoutes);
+app.use("/api/stories", storyRoutes);
 app.use("/api/upload", require("./routes/uploadRoutes"));
 
 // Error Handling Middleware (Optional but recommended)
