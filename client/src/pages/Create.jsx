@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api.js';
 import { FaRegSmile } from 'react-icons/fa';
 import EmojiPicker from 'emoji-picker-react';
+import Button from '../components/Button';
 
 const TABS = [
   { label: 'Post', value: 'post' },
@@ -115,7 +116,8 @@ const Create = () => {
             {TABS.map(t => (
               <button
                 key={t.value}
-                className={`flex-1 py-3 rounded-t-xl text-xl font-semibold transition-all font-circular-web ${tab === t.value ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg' : 'bg-[#222] text-white/60'}`}
+                className={`flex-1 py-3 rounded-t-xl text-xl font-circular-web transition-all backdrop-blur-md ${tab === t.value ? 'bg-white/10 text-white shadow-lg' : 'bg-white/5 text-white/60'}`}
+                style={{border: 'none'}}
                 onClick={() => { setTab(t.value); setCaption(''); setMedia([]); setPreview([]); }}
               >
                 {t.label}
@@ -134,13 +136,12 @@ const Create = () => {
                 ref={fileInputRef}
                 className="hidden"
               />
-              <button
+              <Button
                 type="button"
-                className="w-full py-3 bg-gradient-to-r from-blue-700 to-purple-700 rounded mb-2 text-white font-semibold font-circular-web shadow-md hover:from-blue-800 hover:to-purple-800 transition text-lg"
+                title={media.length > 0 ? `Change Media (${media.length})` : `Upload ${tab === 'post' ? 'Media' : 'Story Media'}`}
                 onClick={() => fileInputRef.current.click()}
-              >
-                {media.length > 0 ? `Change Media (${media.length})` : `Upload ${tab === 'post' ? 'Media' : 'Story Media'}`}
-              </button>
+                containerClass="w-full mb-2"
+              />
               {/* Preview */}
               <div className="flex gap-3 overflow-x-auto mt-3">
                 {preview.map((src, i) => (
@@ -182,13 +183,12 @@ const Create = () => {
             {/* Error */}
             {error && <div className="text-red-400 mb-2 text-center font-circular-web">{error}</div>}
             {/* Submit */}
-            <button
+            <Button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg text-xl font-bold mt-2 disabled:opacity-60 font-circular-web shadow-md hover:from-blue-700 hover:to-purple-700 transition"
+              title={loading ? 'Uploading...' : tab === 'post' ? 'Create Post' : 'Add Story'}
+              containerClass="w-full mt-2"
               disabled={loading || media.length === 0 || (tab === 'post' && media.length > MAX_POST_MEDIA) || (tab === 'story' && media.length > MAX_STORY_MEDIA)}
-            >
-              {loading ? 'Uploading...' : tab === 'post' ? 'Create Post' : 'Add Story'}
-            </button>
+            />
           </form>
         </div>
       </div>

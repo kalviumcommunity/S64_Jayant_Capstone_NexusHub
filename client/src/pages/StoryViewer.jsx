@@ -271,10 +271,10 @@ const StoryViewer = () => {
           <div className="flex items-center justify-between mt-2">
             {/* Username and time ago in a column */}
             <div className="flex flex-col items-start gap-0">
-              <div className="flex items-center gap-3">
-                <img src={currStory.user.profilePicture || '/img/default-avatar.png'} alt={currStory.user.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50" />
-                <span className="text-white font-semibold text-base">{currStory.user.name}</span>
-              </div>
+            <div className="flex items-center gap-3">
+              <img src={currStory.user.profilePicture || '/img/default-avatar.png'} alt={currStory.user.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50" />
+              <span className="text-white font-semibold text-base">{currStory.user.name}</span>
+            </div>
               <span className="text-xs text-white/50 ml-12 mt-0.5">{getTimeAgo(currStory.createdAt)}</span>
             </div>
             {/* Eye button (owner only), Play/Pause (if video), and Close */}
@@ -318,7 +318,35 @@ const StoryViewer = () => {
         <div className="w-full px-6 pb-6 pt-4 flex flex-col gap-2">
           {/* Caption */}
           {currStory.caption && <div className="text-center text-white text-base mb-2">{currStory.caption}</div>}
-          {/* Eye (viewers) button removed from here */}
+          {/* Like and Comment (non-owner only) */}
+          {!isOwner && (
+            <div className="flex items-center gap-3 mt-2">
+              {/* Like Button */}
+              <button
+                onClick={handleLike}
+                disabled={likeLoading}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-white transition bg-[#232347] hover:bg-pink-600/80 ${isLiked ? 'text-pink-400' : 'text-white/80'}`}
+              >
+                <FiHeart className="text-lg" />
+                <span className="text-sm">{likesCount}</span>
+              </button>
+              {/* Comment Box */}
+              <form onSubmit={handleComment} className="flex-1 flex items-center bg-[#232347] rounded-full px-3 py-1.5">
+                <input
+                  type="text"
+                  className="flex-1 bg-transparent outline-none text-white placeholder-white/50 text-sm"
+                  placeholder="Add a comment..."
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  disabled={commentLoading}
+                  maxLength={200}
+                />
+                <button type="submit" disabled={commentLoading || !comment.trim()} className="ml-2 text-blue-400 hover:text-blue-600 text-lg">
+                  <FiSend />
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
       {/* Animations */}

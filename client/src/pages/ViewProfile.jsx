@@ -22,6 +22,11 @@ const ViewProfile = () => {
   const [activeTab, setActiveTab] = useState('Posts');
   const [updatingPrivacy, setUpdatingPrivacy] = useState(false);
   const [accountType, setAccountType] = useState(user?.isPrivate !== false ? 'Private' : 'Public');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState('');
+  const [isFriend, setIsFriend] = useState(false);
+  const [isFollower, setIsFollower] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -43,6 +48,15 @@ const ViewProfile = () => {
     setAccountType(user?.isPrivate !== false ? 'Private' : 'Public');
   }, [user]);
 
+  useEffect(() => {
+    if (!user || !loggedInUser) return;
+    // Check if already friend or follower
+    setIsFriend(user.friends && user.friends.includes(loggedInUser._id));
+    setIsFollower(user.followers && user.followers.includes(loggedInUser._id));
+    // Check if friend request already sent
+    setRequestSent(user.friendRequests && user.friendRequests.includes(loggedInUser._id));
+  }, [user, loggedInUser]);
+
   // Toggle account type handler
   const handleAccountTypeToggle = async () => {
     if (!isOwnProfile) return;
@@ -56,6 +70,34 @@ const ViewProfile = () => {
       // Optionally show error
     } finally {
       setUpdatingPrivacy(false);
+    }
+  };
+
+  // Action handlers
+  const handleFollow = async () => {
+    setActionLoading(true);
+    setActionSuccess('');
+    try {
+      await api.post('/users/follow', { userId: user._id });
+      setIsFollower(true);
+      setActionSuccess('Following!');
+    } catch (err) {
+      setActionSuccess('Failed to follow');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+  const handleFriendRequest = async () => {
+    setActionLoading(true);
+    setActionSuccess('');
+    try {
+      await api.post('/users/friend-request', { userId: user._id });
+      setRequestSent(true);
+      setActionSuccess('Request sent!');
+    } catch (err) {
+      setActionSuccess('Failed to send request');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -118,18 +160,38 @@ const ViewProfile = () => {
           {isOwnProfile ? (
             <button className="px-8 py-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white font-semibold shadow hover:from-purple-700 hover:to-blue-600 transition">Edit Profile</button>
           ) : (
-            <button className="px-8 py-2 rounded-full bg-blue-500 text-white font-semibold shadow hover:bg-blue-600 transition">Add Friend</button>
+            !isPrivate ? (
+              isFollower ? (
+                <button className="px-8 py-2 rounded-full bg-green-600 text-white font-semibold shadow cursor-default" disabled>Following</button>
+              ) : (
+                <button onClick={handleFollow} disabled={actionLoading || isFollower} className="px-8 py-2 rounded-full bg-blue-500 text-white font-semibold shadow hover:bg-blue-600 transition disabled:opacity-60">
+                  {actionLoading ? 'Following...' : 'Follow'}
+                </button>
+              )
+            ) : (
+              isFriend ? (
+                <button className="px-8 py-2 rounded-full bg-green-600 text-white font-semibold shadow cursor-default" disabled>Friends</button>
+              ) : requestSent ? (
+                <button className="px-8 py-2 rounded-full bg-yellow-500 text-white font-semibold shadow cursor-default" disabled>Request Sent</button>
+              ) : (
+                <button onClick={handleFriendRequest} disabled={actionLoading || requestSent} className="px-8 py-2 rounded-full bg-blue-500 text-white font-semibold shadow hover:bg-blue-600 transition disabled:opacity-60">
+                  {actionLoading ? 'Requesting...' : 'Request'}
+                </button>
+              )
+            )
           )}
+          {actionSuccess && <div className="text-green-400 text-sm mt-2">{actionSuccess}</div>}
         </div>
       </div>
       {/* Private Profile Message (Instagram style) */}
-      {isPrivate && !isOwnProfile ? (
+      {isPrivate && !isOwnProfile && !isFriend ? (
         <div className="flex flex-col items-center justify-center w-full max-w-2xl bg-transparent py-10 mt-2 mb-8">
           <span className="text-4xl mb-2">🔒</span>
           <span className="text-lg text-white font-semibold">This account is private</span>
+          <span className="text-gray-400 text-sm mt-2">Follow and get accepted to see posts and more.</span>
         </div>
       ) : (
-        // Tabs/Sections for public or own profile
+        // Tabs/Sections for public or own profile or friend
         <div className="w-full max-w-3xl px-4">
           <div className="flex gap-8 border-b border-gray-700 pb-2 justify-center">
             {['Posts', 'Teams', 'About'].map(tab => (

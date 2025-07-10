@@ -674,3 +674,48 @@ exports.updateMemberRole = async (req, res) => {
     });
   }
 };
+
+// Suggested Teams (by tags/skills, exclude already joined)
+exports.suggestedTeams = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.id);
+    console.log('suggestedTeams: currentUser:', currentUser);
+    if (!currentUser) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // If user has no skills, return empty suggestions
+    if (!currentUser.skills || !Array.isArray(currentUser.skills) || currentUser.skills.length === 0) {
+      console.log('suggestedTeams: user has no skills');
+      return res.json({ success: true, teams: [] });
+    }
+    console.log('suggestedTeams: user skills:', currentUser.skills);
+
+    // Get all teams where user is not a member
+    const myTeamIds = new Set();
+    const myTeams = await Team.find({
+      $or: [
+        { owner: currentUser._id },
+        { 'members.user': currentUser._id }
+      ]
+    });
+    myTeams.forEach(t => myTeamIds.add(t._id.toString()));
+    console.log('suggestedTeams: myTeamIds:', Array.from(myTeamIds));
+
+    // Find teams with matching tags (skills)
+    const query = {
+      _id: { $nin: Array.from(myTeamIds) },
+      tags: { $in: currentUser.skills }
+    };
+    console.log('suggestedTeams: Team.find query:', query);
+    const tagTeams = await Team.find(query)
+      .populate('owner', 'name username profilePicture')
+      .populate('members.user', 'name username profilePicture')
+      .sort({ createdAt: -1 });
+
+    // Limit to 10 suggestions
+    const suggestions = tagTeams.slice(0, 10);
+    res.json({ success: true, teams: suggestions });
+  } catch (error) {
+    console.error('Error in suggestedTeams:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch suggested teams', error: error.message });
+  }
+};

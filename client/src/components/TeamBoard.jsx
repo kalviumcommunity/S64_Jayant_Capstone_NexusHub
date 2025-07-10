@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from '../utils/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import TeamDetails from './TeamDetails';
+import Button from './Button';
 
 const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
   const { user } = useAuth();
@@ -244,15 +245,11 @@ const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
     <div className="w-full">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-robert-medium text-white">Your Teams</h2>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <Button
+          title={<>Create Team</>}
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all flex items-center gap-2"
-        >
-          <FiPlus />
-          Create Team
-        </motion.button>
+          containerClass="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm flex items-center gap-2"
+        />
       </div>
 
       <AnimatePresence>
@@ -320,7 +317,7 @@ const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white hover:from-purple-700 hover:to-blue-600 transition-all"
+                  className="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
                 >
                   Create Team
                 </button>
@@ -563,12 +560,44 @@ const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
 
 const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navigate, currentUser }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
   const isOwner = team.owner && (team.owner._id === currentUser?._id || team.owner === currentUser?._id);
   const isAdmin = team.members && team.members.some(member => {
     const memberId = member.user?._id || member.user;
     const memberRole = member.role;
     return memberId === currentUser?._id && (memberRole === 'admin' || memberRole === 'owner');
   });
+
+  // Fetch join requests for badge and modal
+  const fetchRequests = async () => {
+    setRequestsLoading(true);
+    try {
+      const res = await api.get(`/teams/${team._id}/join-requests`);
+      setRequests(res.data.data || []);
+    } catch {
+      setRequests([]);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  // Show badge if private team and owner/admin
+  const showBadge = (isOwner || isAdmin) && !team.isPublic;
+
+  // Open modal and fetch requests
+  const handleOpenRequests = async (e) => {
+    e.stopPropagation();
+    await fetchRequests();
+    setShowRequestsModal(true);
+  };
+
+  // Accept/reject logic
+  const handleRequestAction = async (userId, action) => {
+    await api.post(`/teams/${team._id}/join-requests`, { userId, action });
+    setRequests(r => r.filter(req => req.user._id !== userId));
+  };
 
   const handleButtonClick = (e, callback) => {
     e.stopPropagation();
@@ -597,10 +626,7 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
   };
 
   return (
-    <div 
-      onClick={handleTeamClick}
-      className="block no-underline text-inherit cursor-pointer"
-    >
+    <div onClick={handleTeamClick} className="block no-underline text-inherit cursor-pointer">
       <motion.div
         layout
         initial={{ opacity: 0, scale: 0.9 }}
@@ -656,6 +682,22 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
             >
               <FiEye size={16} />
             </motion.button>
+            {showBadge && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleOpenRequests}
+                className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all relative"
+                title="View Join Requests"
+              >
+                <FiUserPlus size={16} />
+                {requests.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center border-2 border-[#232323]">
+                    {requests.length > 99 ? '99+' : requests.length}
+                  </span>
+                )}
+              </motion.button>
+            )}
             {(isOwner || isAdmin) && !team.isPublic && (
               <motion.button
                 whileHover={{ scale: 1.1 }}
@@ -755,6 +797,63 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
           )}
         </div>
       </div>
+      {/* Join Requests Modal */}
+      <AnimatePresence>
+        {showRequestsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+            onClick={() => setShowRequestsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gray-900 rounded-xl p-6 max-w-md w-full mx-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-robert-medium text-white mb-4">Join Requests for {team.name}</h3>
+              {requestsLoading ? (
+                <div className="text-center py-8 text-white/60">Loading requests...</div>
+              ) : requests.length === 0 ? (
+                <div className="text-center py-8 text-white/60">No pending join requests</div>
+              ) : (
+                <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                  {requests.map(request => (
+                    <div key={request.user._id} className="bg-white/5 rounded-lg p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                          {request.user.name.charAt(0)}
+                        </div>
+                        <div>
+                          <h4 className="text-white font-robert-medium">{request.user.name}</h4>
+                          <p className="text-white/60 text-xs">{request.user.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleRequestAction(request.user._id, 'reject')}
+                          className="p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30"
+                        >
+                          <FiX />
+                        </button>
+                        <button
+                          onClick={() => handleRequestAction(request.user._id, 'accept')}
+                          className="p-2 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30"
+                        >
+                          <FiCheck />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
     </div>
   );

@@ -60,8 +60,26 @@ exports.getActiveStories = async (req, res) => {
     const now = new Date();
     const stories = await Story.find({ expiresAt: { $gt: now } })
       .sort({ createdAt: -1 })
-      .populate('user', 'name email profilePicture');
-    res.json({ success: true, stories });
+      .populate('user', 'name email profilePicture isPrivate friends followers');
+
+    // Filter stories based on privacy/friend/follow logic
+    const filteredStories = stories.filter(story => {
+      const user = story.user;
+      if (!user) return false;
+      // Always show own stories
+      if (user._id.toString() === req.user._id.toString()) return true;
+      // Public profile: show if user follows
+      if (!user.isPrivate) {
+        return user.followers && user.followers.map(id => id.toString()).includes(req.user._id.toString());
+      }
+      // Private profile: show only if mutual friends
+      if (user.isPrivate) {
+        return user.friends && user.friends.map(id => id.toString()).includes(req.user._id.toString());
+      }
+      return false;
+    });
+
+    res.json({ success: true, stories: filteredStories });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error fetching stories', error: error.message });
   }
@@ -86,6 +104,7 @@ exports.likeStory = async (req, res) => {
     if (!story) return res.status(404).json({ success: false, message: 'Story not found' });
     const userId = req.user._id.toString();
     const likeIndex = story.likes.findIndex(like => like.user.toString() === userId);
+    const isOwner = story.user.toString() === userId;
     if (likeIndex > -1) {
       // Unlike
       story.likes.splice(likeIndex, 1);
@@ -95,6 +114,27 @@ exports.likeStory = async (req, res) => {
       // Also add to viewers if not already
       if (!story.viewers.some(v => v.user.toString() === userId)) {
         story.viewers.push({ user: req.user._id, viewedAt: new Date() });
+      }
+      // --- Notification logic ---
+      if (!isOwner) {
+        const owner = await User.findById(story.user);
+        if (owner) {
+          // Prevent duplicate like notifications for the same user and story
+          const alreadyNotified = owner.notifications.some(n => n.type === 'story_like' && n.from.toString() === userId && n.target.toString() === story._id.toString());
+          if (!alreadyNotified) {
+            owner.notifications.push({
+              type: 'story_like',
+              from: req.user._id,
+              target: story._id,
+              message: `${req.user.name || 'Someone'} liked your story`,
+              createdAt: new Date(),
+              read: false
+            });
+            // Keep only latest 100 notifications
+            if (owner.notifications.length > 100) owner.notifications.shift();
+            await owner.save();
+          }
+        }
       }
     }
     await story.save();
@@ -145,6 +185,41 @@ exports.getStoryViewers = async (req, res) => {
     res.json({ success: true, viewers: result });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error fetching viewers', error: error.message });
+  }
+};
+
+// Add comment to a story
+exports.commentOnStory = async (req, res) => {
+  try {
+    const story = await Story.findById(req.params.id);
+    if (!story) return res.status(404).json({ success: false, message: 'Story not found' });
+    const userId = req.user._id.toString();
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ success: false, message: 'Comment text required' });
+    // Add comment
+    if (!story.comments) story.comments = [];
+    story.comments.push({ user: req.user._id, text, createdAt: new Date() });
+    await story.save();
+    // --- Notification logic ---
+    const isOwner = story.user.toString() === userId;
+    if (!isOwner) {
+      const owner = await User.findById(story.user);
+      if (owner) {
+        owner.notifications.push({
+          type: 'story_comment',
+          from: req.user._id,
+          target: story._id,
+          message: `${req.user.name || 'Someone'} commented on your story: ${text.substring(0, 50)}`,
+          createdAt: new Date(),
+          read: false
+        });
+        if (owner.notifications.length > 100) owner.notifications.shift();
+        await owner.save();
+      }
+    }
+    res.json({ success: true, message: 'Comment added' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error commenting on story', error: error.message });
   }
 };
 

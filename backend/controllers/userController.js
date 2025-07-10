@@ -198,7 +198,17 @@ const updateProfile = async (req, res) => {
     }
 
     // Update user fields if provided
-    if (username) user.username = username;
+    if (username && username !== user.username) {
+      // Check if username is unique
+      const existing = await User.findOne({ username, _id: { $ne: user._id } });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: "Username already taken"
+        });
+      }
+      user.username = username;
+    }
     if (email) user.email = email;
     if (name) user.name = name;
     if (bio) user.bio = bio;
@@ -240,25 +250,12 @@ const updateProfile = async (req, res) => {
     }
 
     const updatedUser = await user.save();
-    
-    // Prepare user object for response
-    const userResponse = {
-      _id: updatedUser._id,
-      username: updatedUser.username,
-      email: updatedUser.email,
-      name: updatedUser.name,
-      bio: updatedUser.bio,
-      location: updatedUser.location,
-      website: updatedUser.website,
-      profilePicture: updatedUser.profilePicture,
-      socialLinks: updatedUser.socialLinks,
-      skills: updatedUser.skills
-    };
-
+    // Fetch full user object for response
+    const fullUser = await User.findById(updatedUser._id).select('-password -verificationToken -resetPasswordToken -resetPasswordExpires');
     res.json({
       success: true,
       message: "Profile updated successfully",
-      user: userResponse
+      user: fullUser
     });
   } catch (error) {
     res.status(500).json({
@@ -662,6 +659,115 @@ const getSavedPosts = async (req, res) => {
   }
 };
 
+// --- Follow/Unfollow Logic for Public Profiles ---
+const followUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId || userId === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+    const user = await User.findById(userId);
+    const follower = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (user.isPrivate) {
+      return res.status(403).json({ success: false, message: 'Cannot follow a private profile. Send a friend request instead.' });
+    }
+    if (user.followers.includes(req.user.id)) {
+      return res.status(400).json({ success: false, message: 'Already following' });
+    }
+    // Add to followers if not already present
+    if (!user.followers.includes(req.user.id)) {
+      user.followers.push(req.user.id);
+    }
+    // Add to following if not already present
+    if (!follower.following.includes(userId)) {
+      follower.following.push(userId);
+    }
+    await user.save();
+    await follower.save();
+    res.json({ success: true, message: 'Now following user' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error following user', error: error.message });
+  }
+};
+
+const unfollowUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId || userId === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Invalid userId' });
+    }
+    const user = await User.findById(userId);
+    const follower = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!user.followers.includes(req.user.id)) {
+      return res.status(400).json({ success: false, message: 'Not following this user' });
+    }
+    user.followers = user.followers.filter(id => id.toString() !== req.user.id);
+    follower.following = follower.following.filter(id => id.toString() !== userId);
+    await user.save();
+    await follower.save();
+    res.json({ success: true, message: 'Unfollowed user' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error unfollowing user', error: error.message });
+  }
+};
+
+// Get all notifications for the logged-in user
+const getNotifications = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate('notifications.from', 'name username profilePicture');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    // Sort notifications by createdAt descending
+    const notifications = [...(user.notifications || [])].sort((a, b) => b.createdAt - a.createdAt);
+    res.json({ success: true, notifications });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching notifications', error: error.message });
+  }
+};
+
+// Suggested Users (by skills and mutual friends)
+const suggestedUsers = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.id).populate('friends following');
+    if (!currentUser) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // 1. Users with matching skills
+    const skillUsers = await User.find({
+      _id: { $ne: currentUser._id },
+      skills: { $in: currentUser.skills },
+      isPrivate: false
+    }).select('name username profilePicture skills followers following');
+
+    // 2. Mutual friends (friend-of-friend)
+    const friendIds = currentUser.friends.map(f => f._id.toString());
+    let mutuals = [];
+    if (friendIds.length > 0) {
+      mutuals = await User.find({
+        _id: { $nin: [currentUser._id, ...friendIds] },
+        friends: { $in: friendIds },
+        isPrivate: false
+      }).select('name username profilePicture skills followers following');
+    }
+
+    // 3. Exclude already followed/friends/self
+    const excludeIds = new Set([
+      currentUser._id.toString(),
+      ...currentUser.friends.map(f => f._id.toString()),
+      ...currentUser.following.map(f => f._id.toString())
+    ]);
+    const uniqueUsers = {};
+    [...skillUsers, ...mutuals].forEach(u => {
+      if (!excludeIds.has(u._id.toString())) uniqueUsers[u._id] = u;
+    });
+    const suggestions = Object.values(uniqueUsers).slice(0, 10); // Limit to 10
+
+    res.json({ success: true, users: suggestions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch suggestions', error: error.message });
+  }
+};
+
 // ✅ Export all controllers
 module.exports = {
   register,
@@ -681,4 +787,8 @@ module.exports = {
   savePost,
   unsavePost,
   getSavedPosts,
+  followUser,
+  unfollowUser,
+  getNotifications,
+  suggestedUsers,
 };

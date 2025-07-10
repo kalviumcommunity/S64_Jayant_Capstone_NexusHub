@@ -70,10 +70,46 @@ const userSchema = new mongoose.Schema({
     ref: 'User',
     default: []
   }],
+  followers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }],
+  following: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }],
   savedPosts: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Post',
     default: []
+  }],
+  notifications: [{
+    type: {
+      type: String, // 'story_like', 'story_comment', 'post_like', 'post_comment', 'friend_request'
+      required: true
+    },
+    from: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    target: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: false // story or post id
+    },
+    message: {
+      type: String
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    read: {
+      type: Boolean,
+      default: false
+    }
   }]
 }, { 
   timestamps: true 

@@ -37,6 +37,16 @@ router.post('/save/:postId', protect, savePost);
 router.post('/unsave/:postId', protect, unsavePost);
 router.get('/saved-posts', protect, getSavedPosts);
 
+// Follow/Unfollow public profiles
+router.post('/follow', protect, userController.followUser);
+router.post('/unfollow', protect, userController.unfollowUser);
+
+// Notifications
+router.get('/notifications', protect, userController.getNotifications);
+
+// Suggested users
+router.get('/suggested', protect, userController.suggestedUsers);
+
 // Public profile by username (should be last)
 router.get('/:username', userController.getUserByUsername);
 

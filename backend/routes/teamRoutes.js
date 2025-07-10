@@ -26,4 +26,10 @@ router.post('/:id/join-accept', protect, teamController.acceptJoinRequest);
 router.post('/:id/join-decline', protect, teamController.declineJoinRequest);
 router.get('/:id/join-requests', protect, teamController.listJoinRequests);
 
+// Suggested teams
+router.get('/suggested', protect, (req, res, next) => {
+  console.log('Hitting /teams/suggested route');
+  next();
+}, teamController.suggestedTeams);
+
 module.exports = router;

@@ -12,6 +12,7 @@ import TeamBoard from '../components/TeamBoard';
 import TeamDetails from '../components/TeamDetails';
 import ProjectDetails from '../components/ProjectDetails';
 import api from '../utils/api.js';
+import Button from '../components/Button';
 
 // Dashboard Tabs
 const TABS = {
@@ -588,9 +589,11 @@ const Dashboard = () => {
                     <div className="dashboard-card p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                       <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-robert-medium text-white">Recent Projects</h2>
-                        <button onClick={() => handleTabChange(TABS.TEAMS)} className="text-purple-400 hover:text-purple-300 transition-colors text-sm">
-                          View All
-                        </button>
+                        <Button
+                          title="View All"
+                          containerClass="bg-white text-black font-zentry font-bold uppercase px-7 py-3 flex items-center gap-2 shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
+                          onClick={() => handleTabChange(TABS.TEAMS)}
+                        />
                       </div>
                     
                     <div className="space-y-4">
@@ -687,9 +690,11 @@ const Dashboard = () => {
                   <div className="dashboard-card p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                     <div className="flex justify-between items-center mb-6">
                       <h2 className="text-2xl font-robert-medium text-white">My Tasks</h2>
-                      <button onClick={() => handleTabChange(TABS.TASKS)} className="text-purple-400 hover:text-purple-300 transition-colors text-sm">
-                        View All
-                      </button>
+                      <Button
+                        title="View All"
+                        containerClass="bg-white text-black font-zentry font-bold uppercase px-7 py-3 flex items-center gap-2 shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
+                        onClick={() => handleTabChange(TABS.TASKS)}
+                      />
                     </div>
                     
                     <div className="space-y-3">
@@ -773,9 +778,11 @@ const Dashboard = () => {
                   <div className="dashboard-card p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
                     <div className="flex justify-between items-center mb-6">
                       <h2 className="text-2xl font-robert-medium text-white">Team</h2>
-                      <button onClick={() => handleTabChange(TABS.TEAMS)} className="text-purple-400 hover:text-purple-300 transition-colors text-sm">
-                        View All
-                      </button>
+                      <Button
+                        title="View All"
+                        containerClass="bg-white text-black font-zentry font-bold uppercase px-7 py-3 flex items-center gap-2 shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
+                        onClick={() => handleTabChange(TABS.TEAMS)}
+                      />
                     </div>
                     <div className="space-y-4">
                       <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
@@ -847,7 +854,7 @@ const Dashboard = () => {
                         });
                         handleTabChange(TABS.CREATE_TEAM);
                       }}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
+                      className="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
                     >
                       Create Your First Team
                     </motion.button>
@@ -876,14 +883,11 @@ const Dashboard = () => {
                   <>
                     <div className="flex justify-between items-center mb-6">
                       <h2 className="text-2xl font-robert-medium text-white">Project Management</h2>
-                      <motion.button 
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
+                      <Button 
+                        title="Create Project"
+                        containerClass="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
                         onClick={() => handleTabChange(TABS.CREATE_PROJECT)}
-                      >
-                        Create Project
-                      </motion.button>
+                      />
                     </div>
                     
                     {/* Project Filters */}
@@ -1062,14 +1066,11 @@ const Dashboard = () => {
                           className="col-span-3 text-center py-12"
                         >
                           <div className="text-white/40 text-lg mb-4">No projects found</div>
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
+                          <Button
+                            title="Create Your First Project"
+                            containerClass="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
                             onClick={() => handleTabChange(TABS.CREATE_PROJECT)}
-                          >
-                            Create Your First Project
-                          </motion.button>
+                          />
                         </motion.div>
                       )}
                     </div>
@@ -1089,14 +1090,11 @@ const Dashboard = () => {
                   <h2 className="text-2xl font-robert-medium text-white">
                     {isEditingProject ? 'Edit Project' : 'Create New Project'}
                   </h2>
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 rounded-lg bg-white/10 text-white/70 font-robert-medium hover:bg-white/20 hover:text-white transition-all"
+                  <Button 
+                    title="Cancel"
+                    containerClass="bg-white text-black font-zentry font-bold uppercase px-7 py-3 flex items-center gap-2 shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
                     onClick={() => handleTabChange(TABS.PROJECTS)}
-                  >
-                    Cancel
-                  </motion.button>
+                  />
                 </div>
                 
                 <div className="dashboard-card p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
@@ -1222,15 +1220,12 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="flex justify-end">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="submit"
-                        className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
+                      <Button
+                        title={isEditingProject ? 'Update Project' : 'Create Project'}
+                        containerClass="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
+                        onClick={handleCreateProject}
                         disabled={!projectForm.teamId || teams.length === 0}
-                      >
-                        {isEditingProject ? 'Update Project' : 'Create Project'}
-                      </motion.button>
+                      />
                     </div>
                   </form>
                 </div>
@@ -1246,12 +1241,9 @@ const Dashboard = () => {
               >
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-robert-medium text-white">Task Management</h2>
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all ${
-                      !selectedProject ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
+                  <Button 
+                    title="Create Task"
+                    containerClass="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
                     onClick={() => {
                       if (selectedProject) {
                         // Scroll to the Kanban board where tasks can be added
@@ -1262,9 +1254,7 @@ const Dashboard = () => {
                       }
                     }}
                     disabled={!selectedProject}
-                  >
-                    Create Task
-                  </motion.button>
+                  />
                 </div>
                 
                 {/* Task Filters */}
@@ -1480,18 +1470,16 @@ const Dashboard = () => {
                   </div>
                   
                   <div className="flex justify-end space-x-4">
-                    <button 
-                      onClick={() => handleTabChange(TABS.TEAMS)} 
-                      className="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={isEditing ? handleEditTeam : handleCreateTeam} 
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-500 text-white font-robert-medium hover:from-purple-700 hover:to-blue-600 transition-all"
-                    >
-                      {isEditing ? 'Save Changes' : 'Create Team'}
-                    </button>
+                    <Button 
+                      title="Cancel"
+                      containerClass="bg-white text-black font-zentry font-bold uppercase px-7 py-3 flex items-center gap-2 shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
+                      onClick={() => handleTabChange(TABS.TEAMS)}
+                    />
+                    <Button 
+                      title={isEditing ? 'Save Changes' : 'Create Team'}
+                      containerClass="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
+                      onClick={isEditing ? handleEditTeam : handleCreateTeam}
+                    />
                   </div>
                 </div>
               </div>

@@ -5,6 +5,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { pixelTransition } from '../utils/pixelTransition';
 import { Switch } from '@headlessui/react';
 import PostCard from '../components/feed/PostCard';
+import { FiSettings } from 'react-icons/fi';
+import api from '../utils/api.js';
+import Button from '../components/Button';
+import { TiLocationArrow } from 'react-icons/ti';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -22,7 +26,7 @@ const Profile = () => {
   
   const defaultProfile = {
     name: '',
-    title: '',
+    username: '', // <-- Added username
     about: '',
     skills: []
   };
@@ -32,18 +36,7 @@ const Profile = () => {
   // Load user data on mount
   useEffect(() => {
     if (user) {
-      // Initialize profile data from user object
-      setProfileData(prevData => ({
-        ...prevData,
-        name: user.name || prevData.name,
-        // If user has a title in their profile, use it, otherwise keep default
-        title: user.title || prevData.title,
-        about: user.bio || prevData.about,
-        // If user has skills, use them, otherwise keep default
-        skills: user.skills || prevData.skills
-      }));
-      
-      // Set profile picture if available
+      // Set profile picture and account type only
       if (user.profilePicture) {
         setPreviewImage(user.profilePicture.startsWith('http') 
           ? user.profilePicture 
@@ -56,31 +49,23 @@ const Profile = () => {
     // App.jsx will handle hiding the loader after route change
   }, [user]);
 
-  // Fetch user posts (dummy for now, replace with real fetch if needed)
+  // Fetch user posts from backend API
   useEffect(() => {
-    // TODO: Replace with real API call
-    setUserPosts(user?.posts || []);
-  }, [user]);
+    const fetchUserPosts = async () => {
+      if (!user?._id) return;
+      try {
+        const res = await api.get(`/posts/user/${user._id}`);
+        setUserPosts(res.data.posts || []);
+      } catch (err) {
+        setUserPosts([]);
+      }
+    };
+    fetchUserPosts();
+  }, [user?._id]);
 
   // Categorize posts
   const posts = userPosts.filter(post => {
-    if (!post.media || post.media.length === 0) return false;
-    const m = post.media[0];
-    if (m.type === 'image') {
-      // All images, any ratio, go to posts
-      return true;
-    }
-    if (m.type === 'video') {
-      // Videos except 9:16 go to posts
-      return !(m.aspectRatio && Math.abs(m.aspectRatio - 9 / 16) < 0.05);
-    }
-    return false;
-  });
-  const reels = userPosts.filter(post => {
-    if (!post.media || post.media.length === 0) return false;
-    const m = post.media[0];
-    // Only videos with 9:16 ratio go to reels
-    return m.type === 'video' && m.aspectRatio && Math.abs(m.aspectRatio - 9 / 16) < 0.05;
+    return post.media && post.media.length > 0;
   });
 
   const handleLogout = () => {
@@ -93,6 +78,12 @@ const Profile = () => {
   };
 
   const handleEditProfile = () => {
+    setProfileData({
+      name: user?.name || '',
+      username: user?.username || '',
+      about: user?.bio || '',
+      skills: user?.skills || []
+    });
     setIsEditModalOpen(true);
   };
 
@@ -174,6 +165,7 @@ const Profile = () => {
         updateData = new FormData();
         updateData.append('profilePicture', selectedImage);
         updateData.append('name', profileData.name);
+        updateData.append('username', profileData.username); // <-- Send username
         updateData.append('bio', profileData.about);
         updateData.append('title', profileData.title);
         
@@ -186,6 +178,7 @@ const Profile = () => {
         // Regular JSON data if no image
         updateData = {
           name: profileData.name,
+          username: profileData.username, // <-- Send username
           bio: profileData.about,
           title: profileData.title,
           skills: profileData.skills,
@@ -229,9 +222,13 @@ const Profile = () => {
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
 
       {/* Back Button */}
-      <button onClick={() => navigate('/feed')} className="absolute top-6 left-6 z-20 px-4 py-2 bg-[#232347] text-white rounded-full font-semibold shadow hover:bg-[#2d2d4d] transition">
-        &larr; Back
-      </button>
+      <Button
+        id="profile-back-btn"
+        title="Back"
+        leftIcon={<span style={{ transform: 'rotate(180deg)', display: 'flex', alignItems: 'center' }}><TiLocationArrow /></span>}
+        containerClass="absolute top-6 left-6 z-20 bg-white text-black font-zentry font-bold uppercase px-7 py-3 flex items-center gap-2 shadow hover:bg-yellow-200 active:scale-95 transition"
+        onClick={() => navigate('/feed')}
+      />
 
       {/* Profile Details */}
       <div className="relative z-10 flex flex-col items-center pt-20 pb-8">
@@ -247,7 +244,22 @@ const Profile = () => {
           {/* Details */}
           <div className="flex-1 flex flex-col items-center md:items-start">
             <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-              <span className="text-2xl md:text-3xl font-bold text-white">{user?.name}</span>
+              <span className="text-2xl md:text-3xl font-bold text-white flex items-center gap-14">
+                {user?.name}
+                {/* Settings (edit) button, only for own profile */}
+                {user?._id === user?._id && (
+                  <button
+                    onClick={handleEditProfile}
+                    className="p-1 rounded-full hover:bg-[#232347] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    title="Edit Profile"
+                  >
+                    <FiSettings className="text-xl text-white/80 hover:text-blue-400 transition" />
+                  </button>
+                )}
+              </span>
+            </div>
+            {/* Username below name */}
+            <div className="flex items-center gap-2 mb-2">
               <span className="text-white/60 text-lg">@{user?.username}</span>
             </div>
             <div className="flex gap-8 text-white/80 text-lg mb-4">
@@ -261,13 +273,13 @@ const Profile = () => {
         <div className="flex flex-row gap-8 w-full max-w-3xl mt-6">
           <div className="flex-1 bg-[#232347] rounded-xl p-4 text-white/90">
             <div className="font-semibold text-lg mb-2">About</div>
-            <div>{profileData.about || 'No about info yet.'}</div>
+            <div>{user?.bio || 'No about info yet.'}</div>
           </div>
           <div className="flex-1 bg-[#232347] rounded-xl p-4 text-white/90">
             <div className="font-semibold text-lg mb-2">Skills</div>
             <div className="flex flex-wrap gap-2">
-              {profileData.skills && profileData.skills.length > 0 ? (
-                profileData.skills.map((skill, i) => (
+              {user?.skills && user.skills.length > 0 ? (
+                user.skills.map((skill, i) => (
                   <span key={i} className="bg-blue-600/80 text-white px-3 py-1 rounded-full text-sm font-medium">{skill}</span>
                 ))
               ) : (
@@ -279,15 +291,14 @@ const Profile = () => {
       </div>
       {/* Filters */}
       <div className="relative z-10 flex justify-center mt-4 mb-8 gap-4">
-        <button onClick={() => setActiveTab('posts')} className={`px-6 py-2 rounded-full font-bold text-lg transition ${activeTab === 'posts' ? 'bg-blue-600 text-white' : 'bg-[#232347] text-white/60'}`}>Posts</button>
-        <button onClick={() => setActiveTab('reels')} className={`px-6 py-2 rounded-full font-bold text-lg transition ${activeTab === 'reels' ? 'bg-blue-600 text-white' : 'bg-[#232347] text-white/60'}`}>Reels</button>
+        <button onClick={() => setActiveTab('posts')} className={`px-6 py-2 rounded-full font-bold text-lg transition bg-blue-600 text-white`}>Posts</button>
       </div>
       {/* Posts/Reels Grid */}
       <div className="relative z-10 w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-16">
-        {(activeTab === 'posts' ? posts : reels).length === 0 ? (
-          <div className="col-span-full text-center text-white/60 py-12">No {activeTab} yet.</div>
+        {posts.length === 0 ? (
+          <div className="col-span-full text-center text-white/60 py-12">No posts yet.</div>
         ) : (
-          (activeTab === 'posts' ? posts : reels).map(post => (
+          posts.map(post => (
             <PostCard key={post._id} post={post} />
           ))
         )}
@@ -323,10 +334,11 @@ const Profile = () => {
                 <label className="block text-gray-300 mb-1">Name</label>
                 <input type="text" name="name" value={profileData.name} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
               </div>
-              {/* Title */}
+              {/* Username */}
               <div className="mb-4">
-                <label className="block text-gray-300 mb-1">Title</label>
-                <input type="text" name="title" value={profileData.title} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                <label className="block text-gray-300 mb-1">Username</label>
+                <input type="text" name="username" value={profileData.username} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                <span className="text-gray-500 text-xs">This will be your public @username.</span>
               </div>
               {/* About */}
               <div className="mb-4">

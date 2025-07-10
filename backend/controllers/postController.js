@@ -92,34 +92,67 @@ exports.getFeedPosts = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skipIndex = (page - 1) * limit;
 
-    // Since the user model doesn't have a connections field, we'll just show public posts
-    // and posts by the current user
-    const query = {
-      $or: [
-        { visibility: 'public' },
-        { author: req.user._id }
-      ]
-    };
-
-    // Add tag filter if provided
-    if (req.query.tag) {
-      query.tags = req.query.tag;
-    }
-
-    const posts = await Post.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skipIndex)
-      .limit(limit)
-      .populate('author', 'name email profilePicture')
+    // Fetch all posts (public + private + connections)
+    const allPosts = await Post.find()
+      .populate('author', 'name email profilePicture isPrivate friends followers')
       .populate('project', 'title')
       .populate('comments.user', 'name email profilePicture')
       .populate('likes.user', 'name email profilePicture');
 
-    const total = await Post.countDocuments(query);
+    // Split posts into categories
+    const selfPosts = [];
+    const followedPosts = [];
+    const publicPosts = [];
+    const mutualFriendPosts = [];
+
+    allPosts.forEach(post => {
+      const author = post.author;
+      if (!author) return;
+      const isSelf = author._id.toString() === req.user._id.toString();
+      if (isSelf) return; // Exclude own posts
+      const isFollower = author.followers && author.followers.map(id => id.toString()).includes(req.user._id.toString());
+      const isFriend = author.friends && author.friends.map(id => id.toString()).includes(req.user._id.toString());
+      if (!author.isPrivate && isFollower) {
+        followedPosts.push(post);
+      } else if (!author.isPrivate) {
+        publicPosts.push(post);
+      } else if (author.isPrivate && isFriend) {
+        mutualFriendPosts.push(post);
+      }
+    });
+
+    // Shuffle publicPosts for explore-like randomness
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+    const shuffledPublicPosts = shuffle(publicPosts);
+
+    // Combine: latest self + latest followed + latest mutual friends + shuffled public
+    const combined = [
+      ...selfPosts.sort((a, b) => b.createdAt - a.createdAt),
+      ...followedPosts.sort((a, b) => b.createdAt - a.createdAt),
+      ...mutualFriendPosts.sort((a, b) => b.createdAt - a.createdAt),
+      ...shuffledPublicPosts
+    ];
+
+    // Remove duplicates (by post._id)
+    const seen = new Set();
+    const uniqueCombined = combined.filter(post => {
+      if (seen.has(post._id.toString())) return false;
+      seen.add(post._id.toString());
+      return true;
+    });
+
+    const total = uniqueCombined.length;
+    const paginated = uniqueCombined.slice(skipIndex, skipIndex + limit);
 
     res.json({
       success: true,
-      posts,
+      posts: paginated,
       currentPage: page,
       totalPages: Math.ceil(total / limit),
       totalPosts: total
@@ -141,11 +174,25 @@ exports.getUserPosts = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skipIndex = (page - 1) * limit;
 
-    const query = { author: userId };
-    if (userId !== req.user._id.toString()) {
-      query.visibility = { $ne: 'private' };
+    const User = require('../models/userModel');
+    const author = await User.findById(userId).select('isPrivate friends followers');
+    if (!author) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    const isSelf = userId === req.user._id.toString();
+    const isFriend = author.friends.map(id => id.toString()).includes(req.user._id.toString());
+    const isFollower = author.followers.map(id => id.toString()).includes(req.user._id.toString());
+
+    let canView = false;
+    if (isSelf) canView = true;
+    else if (!author.isPrivate && isFollower) canView = true;
+    else if (author.isPrivate && isFriend) canView = true;
+
+    if (!canView) {
+      return res.json({ success: true, posts: [], currentPage: page, totalPages: 0, totalPosts: 0 });
     }
 
+    const query = { author: userId };
     const posts = await Post.find(query)
       .sort({ createdAt: -1 })
       .skip(skipIndex)
@@ -195,6 +242,27 @@ exports.toggleLike = async (req, res) => {
     } else {
       // Like
       post.likes.push({ user: req.user._id });
+      // --- Notification logic ---
+      const isOwner = post.author.toString() === req.user._id.toString();
+      if (!isOwner) {
+        const owner = await User.findById(post.author);
+        if (owner) {
+          // Prevent duplicate like notifications for the same user and post
+          const alreadyNotified = owner.notifications.some(n => n.type === 'post_like' && n.from.toString() === req.user._id.toString() && n.target.toString() === post._id.toString());
+          if (!alreadyNotified) {
+            owner.notifications.push({
+              type: 'post_like',
+              from: req.user._id,
+              target: post._id,
+              message: `${req.user.name || 'Someone'} liked your post`,
+              createdAt: new Date(),
+              read: false
+            });
+            if (owner.notifications.length > 100) owner.notifications.shift();
+            await owner.save();
+          }
+        }
+      }
     }
 
     await post.save();
@@ -236,6 +304,24 @@ exports.addComment = async (req, res) => {
       user: req.user._id,
       content
     });
+
+    // --- Notification logic ---
+    const isOwner = post.author.toString() === req.user._id.toString();
+    if (!isOwner) {
+      const owner = await User.findById(post.author);
+      if (owner) {
+        owner.notifications.push({
+          type: 'post_comment',
+          from: req.user._id,
+          target: post._id,
+          message: `${req.user.name || 'Someone'} commented on your post: ${content.substring(0, 50)}`,
+          createdAt: new Date(),
+          read: false
+        });
+        if (owner.notifications.length > 100) owner.notifications.shift();
+        await owner.save();
+      }
+    }
 
     await post.save();
     await post.populate('comments.user', 'name email profilePicture');
@@ -366,32 +452,37 @@ exports.searchPosts = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skipIndex = (page - 1) * limit;
 
-    const searchQuery = {
-      $and: [
-        { $text: { $search: query } },
-        {
-          $or: [
-            { visibility: 'public' },
-            { author: req.user._id }
-          ]
-        }
-      ]
-    };
-
-    const posts = await Post.find(searchQuery)
+    // Fetch all posts matching text search
+    const allPosts = await Post.find({ $text: { $search: query } })
       .sort({ score: { $meta: 'textScore' } })
-      .skip(skipIndex)
-      .limit(limit)
-      .populate('author', 'name email profilePicture')
+      .populate('author', 'name email profilePicture isPrivate friends followers')
       .populate('project', 'title')
       .populate('comments.user', 'name email profilePicture')
       .populate('likes.user', 'name email profilePicture');
 
-    const total = await Post.countDocuments(searchQuery);
+    // Filter posts based on privacy/friend/follow logic
+    const filteredPosts = allPosts.filter(post => {
+      const author = post.author;
+      if (!author) return false;
+      // Always show own posts
+      if (author._id.toString() === req.user._id.toString()) return true;
+      // Public profile: show if user follows
+      if (!author.isPrivate) {
+        return author.followers && author.followers.map(id => id.toString()).includes(req.user._id.toString());
+      }
+      // Private profile: show only if mutual friends
+      if (author.isPrivate) {
+        return author.friends && author.friends.map(id => id.toString()).includes(req.user._id.toString());
+      }
+      return false;
+    });
+
+    const total = filteredPosts.length;
+    const paginated = filteredPosts.slice(skipIndex, skipIndex + limit);
 
     res.json({
       success: true,
-      posts,
+      posts: paginated,
       currentPage: page,
       totalPages: Math.ceil(total / limit),
       totalPosts: total

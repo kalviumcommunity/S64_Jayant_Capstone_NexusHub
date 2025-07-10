@@ -12,6 +12,8 @@ router.get('/', protect, storyController.getActiveStories);
 router.get('/:id', protect, storyController.getStoryById);
 // Like/unlike story
 router.post('/:id/like', protect, storyController.likeStory);
+// Comment on story
+router.post('/:id/comment', protect, storyController.commentOnStory);
 // Mark as viewed
 router.post('/:id/view', protect, storyController.viewStory);
 // Get viewers/likes (owner only)
