@@ -43,20 +43,30 @@ export const FeedProvider = ({ children }) => {
         queryParams += '&type=project';
       }
       
-      const response = await api.get(`/posts${queryParams}`);
+      // Fetch posts and savedPosts in parallel
+      const [postsRes, savedRes] = await Promise.all([
+        api.get(`/posts${queryParams}`),
+        api.get('/users/saved-posts')
+      ]);
       
       // Handle different response structures
       let newPosts = [];
-      if (response.data && Array.isArray(response.data.posts)) {
-        newPosts = response.data.posts;
-      } else if (response.data && Array.isArray(response.data.data)) {
-        newPosts = response.data.data;
-      } else if (response.data && response.data.success && Array.isArray(response.data.data)) {
-        newPosts = response.data.data;
+      if (postsRes.data && Array.isArray(postsRes.data.posts)) {
+        newPosts = postsRes.data.posts;
+      } else if (postsRes.data && Array.isArray(postsRes.data.data)) {
+        newPosts = postsRes.data.data;
+      } else if (postsRes.data && postsRes.data.success && Array.isArray(postsRes.data.data)) {
+        newPosts = postsRes.data.data;
       } else {
-        console.warn('Unexpected post data structure:', response.data);
+        console.warn('Unexpected post data structure:', postsRes.data);
         newPosts = [];
       }
+      
+      // Get saved post IDs
+      const savedIds = (savedRes.data?.savedPosts || []).map(p => (p._id || p.id));
+      
+      // Mark isSaved for each post
+      newPosts = newPosts.map(post => ({ ...post, isSaved: savedIds.includes(post._id || post.id) }));
       
       // Update state
       setPosts(prev => reset ? newPosts : [...prev, ...newPosts]);
@@ -123,23 +133,12 @@ export const FeedProvider = ({ children }) => {
   // Like a post
   const likePost = async (postId) => {
     try {
+      // Optimistic update
+      setPosts(prev => prev.map(post => post._id === postId ? { ...post, isLiked: true } : post));
       const response = await api.post(`/posts/${postId}/like`);
-      
-      // Update the post in state
-      setPosts(prev => 
-        prev.map(post => 
-          post._id === postId ? 
-            { 
-              ...post, 
-              likes: response.data.likes || post.likes,
-              isLiked: true
-            } : post
-        )
-      );
-      
+      setPosts(prev => prev.map(post => post._id === postId ? { ...post, likes: response.data.likes || post.likes } : post));
       return response.data;
     } catch (error) {
-      console.error('Error liking post:', error);
       setError(error.response?.data?.message || 'Failed to like post');
       throw error;
     }
@@ -148,23 +147,12 @@ export const FeedProvider = ({ children }) => {
   // Unlike a post
   const unlikePost = async (postId) => {
     try {
-      const response = await api.post(`/posts/${postId}/unlike`);
-      
-      // Update the post in state
-      setPosts(prev => 
-        prev.map(post => 
-          post._id === postId ? 
-            { 
-              ...post, 
-              likes: response.data.likes || post.likes,
-              isLiked: false
-            } : post
-        )
-      );
-      
+      // Optimistic update
+      setPosts(prev => prev.map(post => post._id === postId ? { ...post, isLiked: false } : post));
+      const response = await api.post(`/posts/${postId}/like`); // toggle like
+      setPosts(prev => prev.map(post => post._id === postId ? { ...post, likes: response.data.likes || post.likes } : post));
       return response.data;
     } catch (error) {
-      console.error('Error unliking post:', error);
       setError(error.response?.data?.message || 'Failed to unlike post');
       throw error;
     }
@@ -244,6 +232,43 @@ export const FeedProvider = ({ children }) => {
     }
   };
 
+  // Save a post
+  const savePost = async (postId) => {
+    // Optimistic update
+    setPosts(prev => prev.map(post => post._id === postId ? { ...post, isSaved: true } : post));
+    try {
+      const response = await api.post(`/users/save/${postId}`);
+      return response.data;
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to save post');
+      throw error;
+    }
+  };
+
+  // Unsave a post
+  const unsavePost = async (postId) => {
+    // Optimistic update
+    setPosts(prev => prev.map(post => post._id === postId ? { ...post, isSaved: false } : post));
+    try {
+      const response = await api.post(`/users/unsave/${postId}`);
+      return response.data;
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to unsave post');
+      throw error;
+    }
+  };
+
+  // Get saved posts
+  const getSavedPosts = async () => {
+    try {
+      const response = await api.get('/users/saved-posts');
+      return response.data.savedPosts || [];
+    } catch (error) {
+      setError(error.response?.data?.message || 'Failed to fetch saved posts');
+      return [];
+    }
+  };
+
   // Initial load of posts
   useEffect(() => {
     if (user) {
@@ -317,7 +342,10 @@ export const FeedProvider = ({ children }) => {
     sharePost,
     changeFilter,
     setError,
-    updatePost
+    updatePost,
+    savePost,
+    unsavePost,
+    getSavedPosts
   };
 
   return <FeedContext.Provider value={value}>{children}</FeedContext.Provider>;

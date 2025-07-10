@@ -8,7 +8,10 @@ const {
   deleteAccount,
   verifyEmail,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  savePost,
+  unsavePost,
+  getSavedPosts
 } = require("../controllers/userController");
 const protect = require("../middleware/protectMiddleware");
 const { upload, profileUpload } = require("../utils/fileUpload");
@@ -30,6 +33,9 @@ router.post("/friend-request", protect, userController.sendFriendRequest);
 router.post("/friend-request/accept", protect, userController.acceptFriendRequest);
 router.post("/friend-request/decline", protect, userController.declineFriendRequest);
 router.get("/friend-requests", protect, userController.listFriendRequests);
+router.post('/save/:postId', protect, savePost);
+router.post('/unsave/:postId', protect, unsavePost);
+router.get('/saved-posts', protect, getSavedPosts);
 
 // Public profile by username (should be last)
 router.get('/:username', userController.getUserByUsername);

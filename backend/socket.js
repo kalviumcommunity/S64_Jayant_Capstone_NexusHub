@@ -7,7 +7,11 @@ let io;
 const initializeSocket = (server) => {
   io = socketIO(server, {
     cors: {
-      origin: ["http://localhost:5173", "http://localhost:3000"],
+      origin: [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://nexushubb.netlify.app"
+      ],
       methods: ["GET", "POST"]
     }
   });

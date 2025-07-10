@@ -20,9 +20,12 @@ import Explore from './pages/Explore'
 import ViewProfile from './pages/ViewProfile'
 import StoryViewer from './pages/StoryViewer'
 import Create from './pages/Create'
+import Notifications from './pages/Notifications'
+import Saved from './pages/Saved'
 
 import { AuthProvider } from './context/AuthContext.jsx'
 import { TaskProvider } from './context/TaskContext.jsx'
+import { FeedProvider } from './context/FeedContext.jsx'
 import './styles/pageTransitions.css'
 
 const AppContent = () => {
@@ -57,6 +60,8 @@ const AppContent = () => {
             <Route path="/feed" element={<Feed />} />
             <Route path="/create-post" element={<CreatePost />} />
             <Route path="/create" element={<Create />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/saved" element={<Saved />} />
             <Route path="/teams/:teamId" element={<TeamPage />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/profile/:username" element={<ViewProfile />} />
@@ -79,7 +84,9 @@ const App = () => {
     <Router>
       <AuthProvider>
         <TaskProvider>
-          <AppContent />
+          <FeedProvider>
+            <AppContent />
+          </FeedProvider>
         </TaskProvider>
       </AuthProvider>
     </Router>

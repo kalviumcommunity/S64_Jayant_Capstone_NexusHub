@@ -613,6 +613,55 @@ const getUserByUsername = async (req, res) => {
   }
 };
 
+// Save Post
+const savePost = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const postId = req.params.postId;
+    if (!user.savedPosts.includes(postId)) {
+      user.savedPosts.push(postId);
+      await user.save();
+    }
+    res.json({ success: true, savedPosts: user.savedPosts });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error saving post', error: error.message });
+  }
+};
+
+// Unsave Post
+const unsavePost = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const postId = req.params.postId;
+    user.savedPosts = user.savedPosts.filter(id => id.toString() !== postId);
+    await user.save();
+    res.json({ success: true, savedPosts: user.savedPosts });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error unsaving post', error: error.message });
+  }
+};
+
+// Get Saved Posts
+const getSavedPosts = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: 'savedPosts',
+      populate: [
+        { path: 'author', select: 'name profilePicture' },
+        { path: 'comments.user', select: 'name profilePicture' },
+        { path: 'likes.user', select: 'name profilePicture' },
+        { path: 'project', select: 'title' }
+      ]
+    });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, savedPosts: user.savedPosts });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching saved posts', error: error.message });
+  }
+};
+
 // ✅ Export all controllers
 module.exports = {
   register,
@@ -629,4 +678,7 @@ module.exports = {
   declineFriendRequest,
   listFriendRequests,
   getUserByUsername,
+  savePost,
+  unsavePost,
+  getSavedPosts,
 };

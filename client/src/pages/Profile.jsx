@@ -4,6 +4,7 @@ import '../styles/transitions.css';
 import { useAuth } from '../context/AuthContext.jsx';
 import { pixelTransition } from '../utils/pixelTransition';
 import { Switch } from '@headlessui/react';
+import PostCard from '../components/feed/PostCard';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ const Profile = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [accountType, setAccountType] = useState(user?.isPrivate !== false ? 'Private' : 'Public');
   const [skillInput, setSkillInput] = useState('');
+  const [activeTab, setActiveTab] = useState('posts');
+  const [userPosts, setUserPosts] = useState([]);
   
   const defaultProfile = {
     name: '',
@@ -52,6 +55,33 @@ const Profile = () => {
     // No need for manual transition handling
     // App.jsx will handle hiding the loader after route change
   }, [user]);
+
+  // Fetch user posts (dummy for now, replace with real fetch if needed)
+  useEffect(() => {
+    // TODO: Replace with real API call
+    setUserPosts(user?.posts || []);
+  }, [user]);
+
+  // Categorize posts
+  const posts = userPosts.filter(post => {
+    if (!post.media || post.media.length === 0) return false;
+    const m = post.media[0];
+    if (m.type === 'image') {
+      // All images, any ratio, go to posts
+      return true;
+    }
+    if (m.type === 'video') {
+      // Videos except 9:16 go to posts
+      return !(m.aspectRatio && Math.abs(m.aspectRatio - 9 / 16) < 0.05);
+    }
+    return false;
+  });
+  const reels = userPosts.filter(post => {
+    if (!post.media || post.media.length === 0) return false;
+    const m = post.media[0];
+    // Only videos with 9:16 ratio go to reels
+    return m.type === 'video' && m.aspectRatio && Math.abs(m.aspectRatio - 9 / 16) < 0.05;
+  });
 
   const handleLogout = () => {
     logout();
@@ -198,99 +228,69 @@ const Profile = () => {
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
 
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 py-24">
-        <div className="max-w-5xl mx-auto">
-          {/* Profile Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12">
-            <div className="flex items-center gap-6 mb-6 md:mb-0">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 p-1">
-                <div className="w-full h-full rounded-2xl bg-black/40 backdrop-blur-sm flex items-center justify-center">
-                  {previewImage ? (
-                    <img 
-                      src={previewImage} 
-                      alt={profileData.name} 
-                      className="w-full h-full rounded-2xl object-cover"
-                    />
-                  ) : user?.profilePicture ? (
-                    <img 
-                      src={user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`} 
-                      alt={profileData.name} 
-                      className="w-full h-full rounded-2xl object-cover"
-                    />
-                  ) : (
-                    <span className="text-4xl text-white font-bold">{profileData.name.charAt(0)}</span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-3xl font-extrabold text-white font-display tracking-tight drop-shadow-lg">{profileData.name}</h1>
-                </div>
-                <div className="text-lg text-purple-300 font-semibold mb-1">{profileData.title}</div>
-                <div className="text-gray-400 text-sm">{user?.email}</div>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-gray-300 font-medium">Account Type:</span>
-                  <span className={`ml-1 text-sm font-bold ${accountType === 'Public' ? 'text-green-400' : 'text-red-400'}`}>{accountType}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <button onClick={handleEditProfile} className="px-6 py-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white font-semibold shadow hover:from-purple-700 hover:to-blue-600 transition">Edit Profile</button>
-              <button onClick={handleLogout} className="px-6 py-2 rounded-full bg-gray-800 text-white font-semibold shadow hover:bg-gray-700 transition">Logout</button>
-            </div>
+      {/* Back Button */}
+      <button onClick={() => navigate('/feed')} className="absolute top-6 left-6 z-20 px-4 py-2 bg-[#232347] text-white rounded-full font-semibold shadow hover:bg-[#2d2d4d] transition">
+        &larr; Back
+      </button>
+
+      {/* Profile Details */}
+      <div className="relative z-10 flex flex-col items-center pt-20 pb-8">
+        <div className="flex flex-col md:flex-row items-center gap-8 w-full max-w-3xl mx-auto">
+          {/* Profile Photo */}
+          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#232347] bg-black flex items-center justify-center">
+            {previewImage ? (
+              <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-5xl text-white font-bold">{user?.name?.[0]}</span>
+            )}
           </div>
-
-          {/* Profile Content */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Left Column */}
-            <div className="space-y-6">
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                <h3 className="text-lg font-robert-medium text-white mb-4">About</h3>
-                <p className="text-white/60 font-robert-regular">
-                  {profileData.about ? profileData.about : 'No about info available.'}
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                <h3 className="text-lg font-robert-medium text-white mb-4">Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {profileData.skills && profileData.skills.length > 0 ? (
-                    profileData.skills.map((skill, index) => (
-                      <span key={index} className="px-3 py-1 rounded-lg bg-white/5 text-white/80 text-sm font-robert-regular">
-                        {skill}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-white/60 text-sm">No skills added yet</span>
-                  )}
-                </div>
-              </div>
+          {/* Details */}
+          <div className="flex-1 flex flex-col items-center md:items-start">
+            <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+              <span className="text-2xl md:text-3xl font-bold text-white">{user?.name}</span>
+              <span className="text-white/60 text-lg">@{user?.username}</span>
             </div>
-
-            {/* Right Columns */}
-            <div className="md:col-span-2 space-y-6">
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                <h3 className="text-lg font-robert-medium text-white mb-4">Recent Projects</h3>
-                {user?.projects && user.projects.length > 0 ? (
-                  <div className="space-y-4">
-                    {user.projects.map((project, idx) => (
-                      <div key={project._id || idx} className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-white font-robert-medium">{project.name || 'Untitled Project'}</h4>
-                          <span className="text-white/40 text-sm">{project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : ''}</span>
-                        </div>
-                        <p className="text-white/60 text-sm mt-2">{project.description || 'No description.'}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-white/60 text-sm">No projects yet.</div>
-                )}
-              </div>
+            <div className="flex gap-8 text-white/80 text-lg mb-4">
+              <span><span className="font-bold text-white">{userPosts.length}</span> posts</span>
+              <span><span className="font-bold text-white">{user?.followers?.length || 0}</span> followers</span>
+              <span><span className="font-bold text-white">{user?.following?.length || 0}</span> following</span>
             </div>
           </div>
         </div>
+        {/* About & Skills side by side */}
+        <div className="flex flex-row gap-8 w-full max-w-3xl mt-6">
+          <div className="flex-1 bg-[#232347] rounded-xl p-4 text-white/90">
+            <div className="font-semibold text-lg mb-2">About</div>
+            <div>{profileData.about || 'No about info yet.'}</div>
+          </div>
+          <div className="flex-1 bg-[#232347] rounded-xl p-4 text-white/90">
+            <div className="font-semibold text-lg mb-2">Skills</div>
+            <div className="flex flex-wrap gap-2">
+              {profileData.skills && profileData.skills.length > 0 ? (
+                profileData.skills.map((skill, i) => (
+                  <span key={i} className="bg-blue-600/80 text-white px-3 py-1 rounded-full text-sm font-medium">{skill}</span>
+                ))
+              ) : (
+                <span className="text-white/60">No skills added yet.</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Filters */}
+      <div className="relative z-10 flex justify-center mt-4 mb-8 gap-4">
+        <button onClick={() => setActiveTab('posts')} className={`px-6 py-2 rounded-full font-bold text-lg transition ${activeTab === 'posts' ? 'bg-blue-600 text-white' : 'bg-[#232347] text-white/60'}`}>Posts</button>
+        <button onClick={() => setActiveTab('reels')} className={`px-6 py-2 rounded-full font-bold text-lg transition ${activeTab === 'reels' ? 'bg-blue-600 text-white' : 'bg-[#232347] text-white/60'}`}>Reels</button>
+      </div>
+      {/* Posts/Reels Grid */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-16">
+        {(activeTab === 'posts' ? posts : reels).length === 0 ? (
+          <div className="col-span-full text-center text-white/60 py-12">No {activeTab} yet.</div>
+        ) : (
+          (activeTab === 'posts' ? posts : reels).map(post => (
+            <PostCard key={post._id} post={post} />
+          ))
+        )}
       </div>
 
       {/* Edit Profile Modal */}
@@ -381,21 +381,6 @@ const Profile = () => {
           </div>
         </div>
       )}
-
-      {/* Back Button */}
-      <Link
-        to="/"
-        className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-robert-medium hover:bg-white/10 transition-all backdrop-blur-sm"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path
-            fillRule="evenodd"
-            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-            clipRule="evenodd"
-          />
-        </svg>
-        Back
-      </Link>
 
       {/* Transition Loader */}
       <div className="loader"></div>

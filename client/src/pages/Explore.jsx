@@ -164,9 +164,13 @@ const Explore = () => {
       />
       {/* Foreground content */}
       <div className="relative z-10 min-h-screen flex flex-col justify-start items-center bg-transparent backdrop-blur-sm">
+        {/* Explore Heading */}
+        <div className="w-full flex flex-col items-center" style={{paddingTop: '5.5rem'}}>
+          <h2 className="special-font text-6xl font-bold text-white tracking-wide drop-shadow-lg">Explore</h2>
+        </div>
         <div className="container mx-auto px-4 py-8 w-full">
           {/* Search Section */}
-          <div className="mb-8 mt-32">
+          <div className="mb-8 mt-16">
             <div className="max-w-4xl mx-auto">
               <div className="relative">
                 <input
@@ -588,6 +592,12 @@ const Explore = () => {
           )}
         </div>
       </div>
+      <style>{`
+        .special-font {
+          font-family: 'Zentry', 'circular-web', 'robert-medium', 'sans-serif';
+          letter-spacing: 0.04em;
+        }
+      `}</style>
     </div>
   );
 };
