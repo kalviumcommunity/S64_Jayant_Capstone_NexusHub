@@ -26,6 +26,8 @@ connectDB();
 
 const app = express();
 
+console.log('=== server.js started ===');
+
 // Middleware
 app.use(cors({
   origin: [
@@ -68,7 +70,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/oauth", oauthRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
-app.use("/api/teams", teamRoutes);
+app.use('/api/teams', teamRoutes);
+console.log('=== /api/teams routes registered ===');
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/posts", postRoutes);
@@ -84,6 +87,13 @@ app.use((err, req, res, next) => {
     success: false,
     message: err.message || "Internal Server Error"
   });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
 });
 
 const PORT = process.env.PORT || 5000;

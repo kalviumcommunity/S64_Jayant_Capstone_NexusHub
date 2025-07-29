@@ -54,8 +54,12 @@ const Dashboard = () => {
     name: '',
     description: '',
     isPublic: true,
-    tags: []
+    tags: [],
+    banner: null
   });
+  
+  const [teamBannerPreview, setTeamBannerPreview] = useState(null);
+  const teamBannerInputRef = useRef(null);
   
   // Form states for project creation/editing
   const [projectForm, setProjectForm] = useState({
@@ -326,18 +330,22 @@ const Dashboard = () => {
         return;
       }
       
+      // Create FormData for banner upload
+      const formData = new FormData();
+      formData.append('name', teamForm.name);
+      formData.append('description', teamForm.description);
+      formData.append('isPublic', teamForm.isPublic);
+      formData.append('tags', JSON.stringify(teamForm.tags));
+      
+      if (teamForm.banner) {
+        formData.append('banner', teamForm.banner);
+      }
+      
       // Show loading state (you could add a loading state if needed)
       
       // Make API call to create team
-      const response = await api.post('/teams', {
-        name: teamForm.name,
-        description: teamForm.description,
-        isPublic: teamForm.isPublic,
-        tags: teamForm.tags,
-        initialProject: {
-          name: `${teamForm.name} Project`,
-          description: `Default project for ${teamForm.name} team`
-        }
+      const response = await api.post('/teams', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       
       console.log('Team created successfully:', response.data);
@@ -350,8 +358,10 @@ const Dashboard = () => {
         name: '',
         description: '',
         isPublic: true,
-        tags: []
+        tags: [],
+        banner: null
       });
+      setTeamBannerPreview(null);
       
       handleTabChange(TABS.TEAMS);
     } catch (error) {
@@ -373,12 +383,20 @@ const Dashboard = () => {
         return;
       }
       
+      // Create FormData for banner upload
+      const formData = new FormData();
+      formData.append('name', teamForm.name);
+      formData.append('description', teamForm.description);
+      formData.append('isPublic', teamForm.isPublic);
+      formData.append('tags', JSON.stringify(teamForm.tags));
+      
+      if (teamForm.banner) {
+        formData.append('banner', teamForm.banner);
+      }
+      
       // Make API call to update team
-      const response = await api.put(`/teams/${selectedTeam._id}`, {
-        name: teamForm.name,
-        description: teamForm.description,
-        isPublic: teamForm.isPublic,
-        tags: teamForm.tags
+      const response = await api.put(`/teams/${selectedTeam._id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       
       console.log('Team updated successfully:', response.data);
@@ -396,8 +414,10 @@ const Dashboard = () => {
       name: '',
       description: '',
       isPublic: true,
-      tags: []
+      tags: [],
+      banner: null
     });
+    setTeamBannerPreview(null);
     
     setIsEditing(false);
     setSelectedTeam(null);
@@ -410,10 +430,26 @@ const Dashboard = () => {
       name: team.name,
       description: team.description,
       isPublic: team.isPublic !== undefined ? team.isPublic : true,
-      tags: team.tags || []
+      tags: team.tags || [],
+      banner: null
     });
+    setTeamBannerPreview(team.banner ? `http://localhost:5000${team.banner}` : null);
     setIsEditing(true);
     handleTabChange(TABS.CREATE_TEAM);
+  };
+  
+  const handleTeamBannerChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setTeamForm(prev => ({ ...prev, banner: file }));
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTeamBannerPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
   
   // Handle project creation
@@ -785,35 +821,19 @@ const Dashboard = () => {
                       />
                     </div>
                     <div className="space-y-4">
-                      <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
-                          JD
+                      {teams.map(team => (
+                        <div key={team._id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                            {team.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="text-white font-robert-medium">{team.name}</h4>
+                            <p className="text-white/60 text-xs">
+                              {team.isPublic ? 'Public Team' : 'Private Team'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-white font-robert-medium">John Doe</h4>
-                          <p className="text-white/60 text-xs">UI/UX Designer</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center text-white font-bold">
-                          SJ
-                        </div>
-                        <div>
-                          <h4 className="text-white font-robert-medium">Sarah Johnson</h4>
-                          <p className="text-white/60 text-xs">Project Manager</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center text-white font-bold">
-                          MR
-                        </div>
-                        <div>
-                          <h4 className="text-white font-robert-medium">Mike Robinson</h4>
-                          <p className="text-white/60 text-xs">Backend Developer</p>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -850,7 +870,8 @@ const Dashboard = () => {
                           name: '',
                           description: '',
                           isPublic: true,
-                          tags: []
+                          tags: [],
+                          banner: null
                         });
                         handleTabChange(TABS.CREATE_TEAM);
                       }}
@@ -1020,27 +1041,48 @@ const Dashboard = () => {
                               {/* Team members */}
                               <div className="flex justify-between items-center mt-4">
                                 <div className="flex -space-x-2">
-                                  {project.team && project.team.slice(0, 3).map((member, index) => {
-                                    // Create a more unique key using member ID if available, or fallback to index
-                                    const memberId = member.user?._id || member.user?.id || member._id || member.id;
-                                    const uniqueKey = memberId ? `${projectId}-member-${memberId}` : `${projectId}-member-${index}`;
-                                    
-                                    return (
-                                      <div 
-                                        key={uniqueKey} 
-                                        className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 border-2 border-gray-800 flex items-center justify-center text-white text-xs font-bold"
-                                      >
-                                        {member.user?.name?.charAt(0) || 'U'}
-                                      </div>
-                                    );
-                                  })}
-                                  {project.team && project.team.length > 3 && (
-                                    <div 
-                                      key={`${projectId}-member-more`}
-                                      className="w-8 h-8 rounded-full bg-white/10 border-2 border-gray-800 flex items-center justify-center text-white text-xs"
-                                    >
-                                      +{project.team.length - 3}
-                                    </div>
+                                  {project.team && project.team.length > 0 && project.isPrivate ? (
+                                    // For private teams, show only the owner (first member with role 'owner')
+                                    (() => {
+                                      const owner = project.team.find(m => m.role === 'owner') || project.team[0];
+                                      const ownerName = owner.user?.name || owner.name || 'Owner';
+                                      const ownerInitials = ownerName.split(' ').map(n => n[0]).join('').toUpperCase();
+                                      const memberId = owner.user?._id || owner.user?.id || owner._id || owner.id || 'owner';
+                                      return (
+                                        <div
+                                          key={`${projectId}-owner-${memberId}`}
+                                          className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 border-2 border-gray-800 flex items-center justify-center text-white text-xs font-bold"
+                                        >
+                                          {ownerInitials}
+                                        </div>
+                                      );
+                                    })()
+                                  ) : (
+                                    // For public teams, show up to 3 unique members as before
+                                    <>
+                                      {project.team && [...new Map(project.team.map(m => [m.user?._id || m.user?.id || m._id || m.id, m])).values()].slice(0, 3).map((member, index) => {
+                                        const memberId = member.user?._id || member.user?.id || member._id || member.id;
+                                        const uniqueKey = memberId ? `${projectId}-member-${memberId}` : `${projectId}-member-${index}`;
+                                        const memberName = member.user?.name || member.name || 'U';
+                                        const memberInitials = memberName.split(' ').map(n => n[0]).join('').toUpperCase();
+                                        return (
+                                          <div
+                                            key={uniqueKey}
+                                            className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 border-2 border-gray-800 flex items-center justify-center text-white text-xs font-bold"
+                                          >
+                                            {memberInitials}
+                                          </div>
+                                        );
+                                      })}
+                                      {project.team && project.team.length > 3 && (
+                                        <div
+                                          key={`${projectId}-member-more`}
+                                          className="w-8 h-8 rounded-full bg-white/10 border-2 border-gray-800 flex items-center justify-center text-white text-xs"
+                                        >
+                                          +{project.team.length - 3}
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                                 
@@ -1467,6 +1509,21 @@ const Dashboard = () => {
                         ? 'Public teams can be discovered by other users' 
                         : 'Private teams are only visible to members'}
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-white/80 text-sm mb-2">Team Banner (Optional)</label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleTeamBannerChange}
+                      className="block w-full text-sm text-white border border-gray-600 rounded-lg cursor-pointer bg-gray-700 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-500 file:text-white hover:file:bg-violet-600"
+                    />
+                    {teamBannerPreview && (
+                      <div className="mt-4">
+                        <img src={teamBannerPreview} alt="Team Banner Preview" className="max-w-full h-auto rounded-lg" />
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex justify-end space-x-4">

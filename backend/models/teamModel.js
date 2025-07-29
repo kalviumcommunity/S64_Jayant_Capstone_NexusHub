@@ -43,6 +43,10 @@ const teamSchema = new mongoose.Schema({
     type: String,
     default: 'default-team.png'
   },
+  banner: {
+    type: String,
+    default: null
+  },
   isPublic: {
     type: Boolean,
     default: true

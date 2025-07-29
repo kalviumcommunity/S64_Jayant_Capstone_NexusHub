@@ -29,12 +29,20 @@ const protect = async (req, res, next) => {
     }
 
     req.user = user;
+    if (req.path === '/suggested') {
+      return res.status(200).json({ debug: 'from protectMiddleware' });
+    }
     next();
   } catch (error) {
-    console.error(error);
+    console.error('ProtectMiddleware error:', error);
+    if (typeof error === 'object' && error.stack) {
+      console.error('ProtectMiddleware stack:', error.stack);
+    }
     return res.status(401).json({
       success: false,
-      message: 'Not authorized, token failed'
+      message: 'Not authorized, token failed',
+      error: error.message,
+      stack: error.stack
     });
   }
 };

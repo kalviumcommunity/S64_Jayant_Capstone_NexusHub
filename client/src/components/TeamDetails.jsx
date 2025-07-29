@@ -257,195 +257,218 @@ const TeamDetails = ({ teamId, onClose }) => {
       exit={{ opacity: 0, y: 20 }}
       className="w-full"
     >
-      {/* Team Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h2 className="text-3xl font-robert-medium text-white">{team.name}</h2>
-          <p className="text-white/60 mt-1">{team.description}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className={`px-2 py-1 rounded-lg text-xs ${
-              team.isPublic ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'
-            }`}>
-              {team.isPublic ? 'Public Team' : 'Private Team'}
-            </span>
-            {team.tags && team.tags.map((tag, index) => (
-              <span key={`tag-${index}`} className="px-2 py-1 rounded-lg text-xs bg-purple-500/20 text-purple-300">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-        <button 
-          onClick={onClose}
-          className="px-4 py-2 rounded-lg bg-white/10 text-white/70 font-robert-medium hover:bg-white/20 hover:text-white transition-all"
-        >
-          Back to Teams
-        </button>
-      </div>
-
-      {/* Team Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="dashboard-card p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300">
-              <FiUsers size={20} />
-            </div>
-            <div>
-              <p className="text-white/60 text-sm">Team Members</p>
-              <h3 className="text-2xl font-robert-medium text-white">
-                {1 + teamMembers.admins.length + teamMembers.members.length}
-              </h3>
-            </div>
-          </div>
-        </div>
-        
-        <div className="dashboard-card p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300">
-              <FiFolder size={20} />
-            </div>
-            <div>
-              <p className="text-white/60 text-sm">Projects</p>
-              <h3 className="text-2xl font-robert-medium text-white">{stats.totalProjects}</h3>
-            </div>
-          </div>
-        </div>
-        
-        <div className="dashboard-card p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-300">
-              <FiCheckCircle size={20} />
-            </div>
-            <div>
-              <p className="text-white/60 text-sm">Completed Tasks</p>
-              <h3 className="text-2xl font-robert-medium text-white">{stats.completedTasks}</h3>
-            </div>
-          </div>
-        </div>
-        
-        <div className="dashboard-card p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-300">
-              <FiClock size={20} />
-            </div>
-            <div>
-              <p className="text-white/60 text-sm">In Progress</p>
-              <h3 className="text-2xl font-robert-medium text-white">{stats.inProgressTasks}</h3>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Team Members */}
-      <div className="dashboard-card p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm mb-6">
-        <h3 className="text-xl font-robert-medium text-white mb-4">Team Members</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Owner */}
-          {teamMembers.owner && (
-            <div key="team-owner" className="flex items-center gap-3 p-3 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 flex items-center justify-center text-white font-bold">
-                {teamMembers.owner.user?.name?.charAt(0) || 'O'}
+      <div className="relative min-h-screen w-full overflow-x-hidden pt-20">
+        {/* Background Video */}
+        <video className="fixed inset-0 w-full h-full object-cover z-0" autoPlay muted loop>
+          <source src="/videos/NexusCrystal.mp4" type="video/mp4" />
+        </video>
+        <div className="relative z-10">
+          {/* Team Header with Banner */}
+          <div className="relative mb-8 mt-4">
+            {/* Team Banner */}
+            {team.banner && (
+              <div className="absolute inset-0 z-0 h-40 md:h-48 rounded-2xl overflow-hidden shadow-xl">
+                <img 
+                  src={team.banner.startsWith('http') ? team.banner : `http://localhost:5000${team.banner}`}
+                  alt={`${team.name} banner`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-transparent" />
               </div>
-              <div>
-                <h4 className="text-white font-robert-medium">{teamMembers.owner.user?.name || 'Team Owner'}</h4>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-lg text-xs bg-purple-500/20 text-purple-300">
-                    Owner
-                  </span>
-                  <span className="text-white/40 text-xs">
-                    {teamMembers.owner.joinedAt ? new Date(teamMembers.owner.joinedAt).toLocaleDateString() : 'N/A'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Admins */}
-          {teamMembers.admins.map((admin, index) => (
-            <div key={`team-admin-${index}`} className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold">
-                {admin.user?.name?.charAt(0) || 'A'}
-              </div>
-              <div>
-                <h4 className="text-white font-robert-medium">{admin.user?.name || 'Admin'}</h4>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-lg text-xs bg-blue-500/20 text-blue-300">
-                    Admin
-                  </span>
-                  <span className="text-white/40 text-xs">
-                    {admin.joinedAt ? new Date(admin.joinedAt).toLocaleDateString() : 'N/A'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {/* Regular Members */}
-          {teamMembers.members.map((member, index) => (
-            <div key={`team-member-${index}`} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-gray-500 to-gray-600 flex items-center justify-center text-white font-bold">
-                {member.user?.name?.charAt(0) || 'M'}
-              </div>
-              <div>
-                <h4 className="text-white font-robert-medium">{member.user?.name || 'Member'}</h4>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-lg text-xs bg-white/10 text-white/70">
-                    Member
-                  </span>
-                  <span className="text-white/40 text-xs">
-                    {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'N/A'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Team Projects */}
-      <div className="dashboard-card p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-        <h3 className="text-xl font-robert-medium text-white mb-4">Team Projects</h3>
-        
-        {teamProjects.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-white/60">No projects found for this team</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {teamProjects.map((project, index) => (
-              <div key={`project-${index}`} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-                <h4 className="text-lg font-robert-medium text-white mb-2">{project.name || 'Project'}</h4>
-                <p className="text-white/60 text-sm mb-3 line-clamp-2">{project.description || 'No description available'}</p>
-                
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white/80 text-sm">Progress</span>
-                  <span className="text-white/80 text-sm">{project.progress || 0}%</span>
-                </div>
-                
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-3">
-                  <div 
-                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
-                    style={{ width: `${project.progress || 0}%` }}
-                  ></div>
-                </div>
-                
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center text-white/60">
-                    <FiCheckCircle className="mr-1" />
-                    <span>{project.completedTasks || 0}/{project.totalTasks || 0} tasks</span>
-                  </div>
-                  
-                  <div className="flex items-center text-white/60">
-                    <FiCalendar className="mr-1" />
-                    <span>
-                      {project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'No deadline'}
+            )}
+            {/* Team Info Overlay */}
+            <div className="relative z-10 p-8 pt-12 md:pt-20 flex flex-col gap-2 md:gap-4" style={{ minHeight: '8rem' }}>
+              <div className="flex flex-col md:flex-row md:items-center md:gap-8">
+                <h2 className="text-3xl md:text-4xl font-robert-medium text-white drop-shadow-lg mb-2 md:mb-0">{team.name}</h2>
+                <div className="flex gap-2 mt-1 md:mt-0">
+                  {console.log('Team owner object:', team.owner)}
+                  <span className={`px-3 py-1 rounded-lg text-xs font-bold ${team.isPublic ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'}`}>{team.isPublic ? 'Public Team' : 'Private Team'}</span>
+                  {team.tags && team.tags.filter(tag => tag && tag.trim() !== '').length > 0 ? (
+                    team.tags.filter(tag => tag && tag.trim() !== '').map((tag, index) => (
+                      <span key={`tag-${index}`} className="px-3 py-1 rounded-lg text-xs bg-purple-500/20 text-purple-300 font-bold">{tag}</span>
+                    ))
+                  ) : (
+                    <span className="px-3 py-1 rounded-lg text-xs bg-purple-500/20 text-purple-300 font-bold">
+                      {(team.owner && team.owner.user && typeof team.owner.user.name === 'string' && team.owner.user.name.trim()) ? team.owner.user.name : 'Owner'}
                     </span>
-                  </div>
+                  )}
                 </div>
               </div>
-            ))}
+              <p className="text-white/80 text-base md:text-lg max-w-2xl drop-shadow-md">{team.description}</p>
+              <button 
+                onClick={onClose}
+                className="absolute top-4 right-4 px-4 py-2 rounded-full bg-white/10 text-white/80 font-robert-medium hover:bg-white/20 hover:text-white transition-all shadow-lg border border-white/10"
+              >
+                Back to Teams
+              </button>
+            </div>
           </div>
-        )}
+
+          {/* Team Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="p-4 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300">
+                  <FiUsers size={20} />
+                </div>
+                <div>
+                  <p className="text-white/60 text-sm">Team Members</p>
+                  <h3 className="text-2xl font-robert-medium text-white">
+                    {1 + teamMembers.admins.length + teamMembers.members.length}
+                  </h3>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300">
+                  <FiFolder size={20} />
+                </div>
+                <div>
+                  <p className="text-white/60 text-sm">Projects</p>
+                  <h3 className="text-2xl font-robert-medium text-white">{stats.totalProjects}</h3>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-300">
+                  <FiCheckCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-white/60 text-sm">Completed Tasks</p>
+                  <h3 className="text-2xl font-robert-medium text-white">{stats.completedTasks}</h3>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-300">
+                  <FiClock size={20} />
+                </div>
+                <div>
+                  <p className="text-white/60 text-sm">In Progress</p>
+                  <h3 className="text-2xl font-robert-medium text-white">{stats.inProgressTasks}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Team Members */}
+          <div className="p-6 rounded-2xl mb-6">
+            <h3 className="text-xl font-robert-medium text-white mb-4">Team Members</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Owner */}
+              {teamMembers.owner && (
+                <div key="team-owner" className="flex items-center gap-3 p-3 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 flex items-center justify-center text-white font-bold">
+                    {teamMembers.owner.user?.name?.charAt(0) || 'O'}
+                  </div>
+                  <div>
+                    <h4 className="text-white font-robert-medium">{teamMembers.owner.user?.name || 'Team Owner'}</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-lg text-xs bg-purple-500/20 text-purple-300">
+                        Owner
+                      </span>
+                      <span className="text-white/40 text-xs">
+                        {teamMembers.owner.joinedAt ? new Date(teamMembers.owner.joinedAt).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Admins */}
+              {teamMembers.admins.map((admin, index) => (
+                <div key={`team-admin-${index}`} className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-center text-white font-bold">
+                    {admin.user?.name?.charAt(0) || 'A'}
+                  </div>
+                  <div>
+                    <h4 className="text-white font-robert-medium">{admin.user?.name || 'Admin'}</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-lg text-xs bg-blue-500/20 text-blue-300">
+                        Admin
+                      </span>
+                      <span className="text-white/40 text-xs">
+                        {admin.joinedAt ? new Date(admin.joinedAt).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Regular Members */}
+              {teamMembers.members.map((member, index) => (
+                <div key={`team-member-${index}`} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-gray-500 to-gray-600 flex items-center justify-center text-white font-bold">
+                    {member.user?.name?.charAt(0) || 'M'}
+                  </div>
+                  <div>
+                    <h4 className="text-white font-robert-medium">{member.user?.name || 'Member'}</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-lg text-xs bg-white/10 text-white/70">
+                        Member
+                      </span>
+                      <span className="text-white/40 text-xs">
+                        {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Team Projects */}
+          <div className="p-6 rounded-2xl">
+            <h3 className="text-xl font-robert-medium text-white mb-4">Team Projects</h3>
+            
+            {teamProjects.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-white/60">No projects found for this team</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {teamProjects.map((project, index) => (
+                  <div key={`project-${index}`} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                    <h4 className="text-lg font-robert-medium text-white mb-2">{project.name || 'Project'}</h4>
+                    <p className="text-white/60 text-sm mb-3 line-clamp-2">{project.description || 'No description available'}</p>
+                    
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-white/80 text-sm">Progress</span>
+                      <span className="text-white/80 text-sm">{project.progress || 0}%</span>
+                    </div>
+                    
+                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-3">
+                      <div 
+                        className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+                        style={{ width: `${project.progress || 0}%` }}
+                      ></div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center text-white/60">
+                        <FiCheckCircle className="mr-1" />
+                        <span>{project.completedTasks || 0}/{project.totalTasks || 0} tasks</span>
+                      </div>
+                      
+                      <div className="flex items-center text-white/60">
+                        <FiCalendar className="mr-1" />
+                        <span>
+                          {project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'No deadline'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </motion.div>
   );

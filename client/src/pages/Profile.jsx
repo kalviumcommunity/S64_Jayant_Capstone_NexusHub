@@ -63,10 +63,18 @@ const Profile = () => {
     fetchUserPosts();
   }, [user?._id]);
 
-  // Categorize posts
-  const posts = userPosts.filter(post => {
-    return post.media && post.media.length > 0;
-  });
+  // Show all posts (caption-only, media-only, or both)
+  const posts = userPosts;
+
+  // Handler to instantly remove a post after delete
+  const handleDeletePost = (postId) => {
+    setUserPosts(prev => prev.filter(post => post._id !== postId));
+  };
+
+  // Handler to instantly update a post after edit
+  const handleEditPost = (updatedPost) => {
+    setUserPosts(prev => prev.map(post => post._id === updatedPost._id ? updatedPost : post));
+  };
 
   const handleLogout = () => {
     logout();
@@ -299,7 +307,7 @@ const Profile = () => {
           <div className="col-span-full text-center text-white/60 py-12">No posts yet.</div>
         ) : (
           posts.map(post => (
-            <PostCard key={post._id} post={post} />
+            <PostCard key={post._id} post={post} onDelete={handleDeletePost} onEdit={handleEditPost} />
           ))
         )}
       </div>

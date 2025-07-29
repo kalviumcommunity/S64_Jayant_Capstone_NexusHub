@@ -135,26 +135,22 @@ const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
         userId,
         action
       });
-      
       // Remove the request from the list
       setJoinRequests(prevRequests => 
         prevRequests.filter(request => request.user._id !== userId)
       );
-      
-      // If accepted, refresh the team data
-      if (action === 'accept') {
-        // Refresh teams data
-        const response = await api.get('/teams/my-teams');
-        if (response.data && response.data.data) {
-          const allTeams = [
-            ...(response.data.data?.owned || []),
-            ...(response.data.data?.member || [])
-          ];
-          
-          // Calculate progress for all teams
-          const teamsWithProgress = await calculateTeamProjectsProgress(allTeams);
-          setTeams(teamsWithProgress);
-        }
+      // Always refetch join requests and team members after any action
+      fetchJoinRequests(teamId);
+      // Refresh teams data for owner
+      const response = await api.get('/teams/my-teams');
+      if (response.data && response.data.data) {
+        const allTeams = [
+          ...(response.data.data?.owned || []),
+          ...(response.data.data?.member || [])
+        ];
+        // Calculate progress for all teams
+        const teamsWithProgress = await calculateTeamProjectsProgress(allTeams);
+        setTeams(teamsWithProgress);
       }
     } catch (error) {
       console.error(`Error ${action}ing join request:`, error);
@@ -167,31 +163,51 @@ const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
       await api.post(`/teams/${teamId}/join`, {
         message: joinMessage
       });
-      
-      // If the team is public, it will be added to user's teams automatically
-      // Refresh teams data
+      // After requesting, refresh teams data for user
       const response = await api.get('/teams/my-teams');
       if (response.data && response.data.data) {
         const allTeams = [
           ...(response.data.data?.owned || []),
           ...(response.data.data?.member || [])
         ];
-        
         // Calculate progress for all teams
         const teamsWithProgress = await calculateTeamProjectsProgress(allTeams);
         setTeams(teamsWithProgress);
-        
         // Update public teams list
         const userTeamIds = allTeams.map(team => team._id || team.id);
         setPublicTeams(prevPublicTeams => 
           prevPublicTeams.filter(team => !userTeamIds.includes(team._id || team.id))
         );
       }
-      
       setSelectedTeam(null);
       setJoinMessage("");
     } catch (error) {
       console.error('Error requesting to join team:', error);
+    }
+  };
+
+  // For public teams join (if needed elsewhere)
+  const joinTeamDirect = async (teamId) => {
+    try {
+      await api.post(`/teams/${teamId}/join`);
+      // After joining, refresh teams data for user
+      const response = await api.get('/teams/my-teams');
+      if (response.data && response.data.data) {
+        const allTeams = [
+          ...(response.data.data?.owned || []),
+          ...(response.data.data?.member || [])
+        ];
+        // Calculate progress for all teams
+        const teamsWithProgress = await calculateTeamProjectsProgress(allTeams);
+        setTeams(teamsWithProgress);
+        // Update public teams list
+        const userTeamIds = allTeams.map(team => team._id || team.id);
+        setPublicTeams(prevPublicTeams => 
+          prevPublicTeams.filter(team => !userTeamIds.includes(team._id || team.id))
+        );
+      }
+    } catch (error) {
+      console.error('Error joining team:', error);
     }
   };
 
@@ -327,7 +343,7 @@ const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
         )}
       </AnimatePresence>
 
-      {/* Join Requests Modal */}
+      {/* Join Requests Modal (now at TeamBoard level) */}
       <AnimatePresence>
         {showJoinRequests && selectedTeam && (
           <motion.div
@@ -335,75 +351,71 @@ const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+            onClick={() => {
+              setShowJoinRequests(false);
+              setSelectedTeam(null);
+            }}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gray-900 rounded-xl p-6 max-w-md w-full mx-4"
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative bg-gray-900 rounded-2xl shadow-2xl p-0 max-w-md w-full mx-4 overflow-hidden"
+              onClick={e => e.stopPropagation()}
             >
-              <h3 className="text-xl font-robert-medium text-white mb-4">
-                Join Requests for {selectedTeam.name}
-              </h3>
-              
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="spinner"></div>
-                  <p className="text-white/60 mt-4">Loading requests...</p>
-                </div>
-              ) : joinRequests.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-white/60">No pending join requests</p>
-                </div>
-              ) : (
-                <div className="space-y-4 max-h-[300px] overflow-y-auto">
-                  {joinRequests.map(request => (
-                    <div key={request.user._id} className="bg-white/5 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
-                          {request.user.name.charAt(0)}
-                        </div>
-                        <div>
-                          <h4 className="text-white font-robert-medium">{request.user.name}</h4>
-                          <p className="text-white/60 text-xs">{request.user.email}</p>
-                        </div>
-                      </div>
-                      
-                      {request.message && (
-                        <p className="text-white/80 text-sm mb-3 bg-white/5 p-2 rounded">
-                          "{request.message}"
-                        </p>
-                      )}
-                      
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleJoinRequest(selectedTeam._id, request.user._id, 'reject')}
-                          className="p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30"
-                        >
-                          <FiX />
-                        </button>
-                        <button
-                          onClick={() => handleJoinRequest(selectedTeam._id, request.user._id, 'accept')}
-                          className="p-2 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30"
-                        >
-                          <FiCheck />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              <div className="mt-6 flex justify-end">
+              {/* Top bar with back button and team name */}
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-gray-900/80 sticky top-0 z-10">
                 <button
                   onClick={() => {
                     setShowJoinRequests(false);
                     setSelectedTeam(null);
                   }}
-                  className="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all"
+                  className="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-sm"
+                  title="Back"
                 >
-                  Close
+                  BACK
                 </button>
+                <h3 className="text-lg font-robert-medium text-white flex-1 text-center -ml-8">
+                  Join Requests for {selectedTeam.name}
+                </h3>
+                <div style={{width:36}}></div>
+              </div>
+              <div className="p-6 pt-4">
+                {loading ? (
+                  <div className="text-center py-8 text-white/60">Loading requests...</div>
+                ) : joinRequests.length === 0 ? (
+                  <div className="text-center py-8 text-white/60">No pending join requests</div>
+                ) : (
+                  <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                    {joinRequests.map(request => (
+                      <div key={request.user._id} className="bg-white/5 rounded-lg p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                            {request.user.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="text-white font-robert-medium">{request.user.name}</h4>
+                            <p className="text-white/60 text-xs">{request.user.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleJoinRequest(selectedTeam._id, request.user._id, 'reject')}
+                            className="p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30"
+                          >
+                            <FiX />
+                          </button>
+                          <button
+                            onClick={() => handleJoinRequest(selectedTeam._id, request.user._id, 'accept')}
+                            className="p-2 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30"
+                          >
+                            <FiCheck />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -560,9 +572,7 @@ const TeamBoard = ({ initialTeams = [], onEditTeam }) => {
 
 const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navigate, currentUser }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [showRequestsModal, setShowRequestsModal] = useState(false);
-  const [requests, setRequests] = useState([]);
-  const [requestsLoading, setRequestsLoading] = useState(false);
+  // Remove showRequestsModal, setShowRequestsModal, requests, setRequests, requestsLoading, setRequestsLoading
   const isOwner = team.owner && (team.owner._id === currentUser?._id || team.owner === currentUser?._id);
   const isAdmin = team.members && team.members.some(member => {
     const memberId = member.user?._id || member.user;
@@ -570,59 +580,14 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
     return memberId === currentUser?._id && (memberRole === 'admin' || memberRole === 'owner');
   });
 
-  // Fetch join requests for badge and modal
-  const fetchRequests = async () => {
-    setRequestsLoading(true);
-    try {
-      const res = await api.get(`/teams/${team._id}/join-requests`);
-      setRequests(res.data.data || []);
-    } catch {
-      setRequests([]);
-    } finally {
-      setRequestsLoading(false);
-    }
-  };
-
   // Show badge if private team and owner/admin
   const showBadge = (isOwner || isAdmin) && !team.isPublic;
 
-  // Open modal and fetch requests
-  const handleOpenRequests = async (e) => {
-    e.stopPropagation();
-    await fetchRequests();
-    setShowRequestsModal(true);
-  };
-
-  // Accept/reject logic
-  const handleRequestAction = async (userId, action) => {
-    await api.post(`/teams/${team._id}/join-requests`, { userId, action });
-    setRequests(r => r.filter(req => req.user._id !== userId));
-  };
-
-  const handleButtonClick = (e, callback) => {
-    e.stopPropagation();
-    e.preventDefault();
-    callback();
-  };
-
   // Handle direct navigation to team details
   const handleTeamClick = (e) => {
-    console.log('TeamCard clicked:', team.name);
-    
-    // If a button was clicked, don't do anything (let the button handle its own click)
-    if (e.target.closest('button') !== null) {
-      console.log('Button clicked, not proceeding with team details view');
-      return;
-    }
-    
-    console.log('No button clicked, proceeding with team details view');
-    if (onViewDetails) {
-      console.log('Using onViewDetails prop');
-      onViewDetails();
-    } else {
-      console.log('Navigating directly to team page');
-      navigate(`/teams/${team._id || team.id}`);
-    }
+    if (e.target.closest('button') !== null) return;
+    if (onViewDetails) onViewDetails();
+    else navigate(`/teams/${team._id || team.id}`);
   };
 
   return (
@@ -638,11 +603,21 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+      {/* Team Banner */}
+      {team.banner && (
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={team.banner.startsWith('http') ? team.banner : `http://localhost:5000${team.banner}`}
+            alt={`${team.name} banner`}
+            className="w-full h-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60"></div>
+        </div>
+      )}
       {/* Background gradient effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10 opacity-0 transition-opacity duration-300" 
         style={{ opacity: isHovered ? 1 : 0 }}
       />
-
       {/* Team info */}
       <div className="relative z-10">
         <div className="flex justify-between items-start mb-2">
@@ -671,11 +646,8 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
-                e.stopPropagation(); // Prevent event bubbling
-                console.log("Eye button clicked directly");
-                if (onViewDetails) {
-                  onViewDetails();
-                }
+                e.stopPropagation();
+                if (onViewDetails) onViewDetails();
               }}
               className="p-2 rounded-full bg-white/10 text-white hover:bg-purple-500/20 hover:text-purple-300 transition-all"
               title="View Team Details"
@@ -686,24 +658,11 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={handleOpenRequests}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onViewRequests) onViewRequests();
+                }}
                 className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all relative"
-                title="View Join Requests"
-              >
-                <FiUserPlus size={16} />
-                {requests.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center border-2 border-[#232323]">
-                    {requests.length > 99 ? '99+' : requests.length}
-                  </span>
-                )}
-              </motion.button>
-            )}
-            {(isOwner || isAdmin) && !team.isPublic && (
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => handleButtonClick(e, onViewRequests)}
-                className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all"
                 title="View Join Requests"
               >
                 <FiUserPlus size={16} />
@@ -714,7 +673,7 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={(e) => handleButtonClick(e, onEdit)}
+                  onClick={(e) => { e.stopPropagation(); onEdit(); }}
                   className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all"
                 >
                   <FiEdit2 size={16} />
@@ -722,7 +681,7 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={(e) => handleButtonClick(e, onDelete)}
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
                   className="p-2 rounded-full bg-white/10 text-white hover:bg-red-500/20 hover:text-red-300 transition-all"
                 >
                   <FiTrash size={16} />
@@ -731,9 +690,7 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
             )}
           </div>
         </div>
-
         <p className="text-white/70 text-sm mb-6 line-clamp-2">{team.description}</p>
-
         {/* Team stats */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center text-white/60 text-sm">
@@ -752,10 +709,8 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
             )}
           </div>
         </div>
-
         {/* Team members */}
         <div className="flex -space-x-2 overflow-hidden">
-          {/* Show owner first */}
           {team.owner && (
             <div
               className="w-8 h-8 rounded-full ring-2 ring-black bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold"
@@ -764,16 +719,11 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
               {typeof team.owner === 'object' ? team.owner.name?.charAt(0) : 'O'}
             </div>
           )}
-          
-          {/* Then show members */}
           {team.members && team.members.map((member, index) => {
-            // Handle different member structures from API
             const memberName = member.user ? 
               (typeof member.user === 'object' ? member.user.name : 'User') : 
               (member.name || 'User');
-            
             const memberRole = member.role || 'member';
-            
             return (
               <div
                 key={`${team._id}-member-${typeof member.user === 'object' ? (member.user._id || index) : (member._id || index)}`}
@@ -784,8 +734,6 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
               </div>
             );
           })}
-          
-          {/* Add member button */}
           {(isOwner || isAdmin) && (
             <motion.div
               whileHover={{ scale: 1.1 }}
@@ -797,64 +745,7 @@ const TeamCard = ({ team, onEdit, onDelete, onViewRequests, onViewDetails, navig
           )}
         </div>
       </div>
-      {/* Join Requests Modal */}
-      <AnimatePresence>
-        {showRequestsModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
-            onClick={() => setShowRequestsModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gray-900 rounded-xl p-6 max-w-md w-full mx-4"
-              onClick={e => e.stopPropagation()}
-            >
-              <h3 className="text-xl font-robert-medium text-white mb-4">Join Requests for {team.name}</h3>
-              {requestsLoading ? (
-                <div className="text-center py-8 text-white/60">Loading requests...</div>
-              ) : requests.length === 0 ? (
-                <div className="text-center py-8 text-white/60">No pending join requests</div>
-              ) : (
-                <div className="space-y-4 max-h-[300px] overflow-y-auto">
-                  {requests.map(request => (
-                    <div key={request.user._id} className="bg-white/5 rounded-lg p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
-                          {request.user.name.charAt(0)}
-                        </div>
-                        <div>
-                          <h4 className="text-white font-robert-medium">{request.user.name}</h4>
-                          <p className="text-white/60 text-xs">{request.user.email}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleRequestAction(request.user._id, 'reject')}
-                          className="p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30"
-                        >
-                          <FiX />
-                        </button>
-                        <button
-                          onClick={() => handleRequestAction(request.user._id, 'accept')}
-                          className="p-2 rounded-lg bg-green-500/20 text-green-300 hover:bg-green-500/30"
-                        >
-                          <FiCheck />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+      </motion.div>
     </div>
   );
 };
@@ -905,6 +796,18 @@ const PublicTeamCard = ({ team, onJoin, navigate, onViewDetails }) => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+      {/* Team Banner */}
+      {team.banner && (
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={team.banner.startsWith('http') ? team.banner : `http://localhost:5000${team.banner}`}
+            alt={`${team.name} banner`}
+            className="w-full h-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60"></div>
+        </div>
+      )}
+      
       {/* Background gradient effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10 opacity-0 transition-opacity duration-300" 
         style={{ opacity: isHovered ? 1 : 0 }}

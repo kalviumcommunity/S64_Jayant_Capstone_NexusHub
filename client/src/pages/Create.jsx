@@ -69,7 +69,11 @@ const Create = () => {
         navigate('/feed');
       }
     } catch (err) {
-      setError('Failed to create. Please try again.');
+      let msg = 'Failed to create. Please try again.';
+      if (err.response && err.response.data && err.response.data.message) {
+        msg = err.response.data.message;
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -139,7 +143,10 @@ const Create = () => {
               <Button
                 type="button"
                 title={media.length > 0 ? `Change Media (${media.length})` : `Upload ${tab === 'post' ? 'Media' : 'Story Media'}`}
-                onClick={() => fileInputRef.current.click()}
+                onClick={e => {
+                  e.preventDefault();
+                  fileInputRef.current.click();
+                }}
                 containerClass="w-full mb-2"
               />
               {/* Preview */}
@@ -187,7 +194,7 @@ const Create = () => {
               type="submit"
               title={loading ? 'Uploading...' : tab === 'post' ? 'Create Post' : 'Add Story'}
               containerClass="w-full mt-2"
-              disabled={loading || media.length === 0 || (tab === 'post' && media.length > MAX_POST_MEDIA) || (tab === 'story' && media.length > MAX_STORY_MEDIA)}
+              disabled={loading || (tab === 'post' && caption.trim() === '' && media.length === 0) || (tab === 'story' && media.length > MAX_STORY_MEDIA)}
             />
           </form>
         </div>

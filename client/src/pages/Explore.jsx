@@ -14,6 +14,16 @@ import {
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api.js';
 
+// Get filtered results based on active filter (MOVE THIS UP)
+const getFilteredResults = (searchResults, activeFilter) => {
+  if (activeFilter === 'all') return searchResults;
+  return {
+    users: activeFilter === 'users' ? searchResults.users : [],
+    teams: activeFilter === 'teams' ? searchResults.teams : [],
+    posts: activeFilter === 'posts' ? searchResults.posts : []
+  };
+};
+
 // Debounce utility
 function useDebounce(callback, delay, deps = []) {
   const handler = useRef();
@@ -42,6 +52,9 @@ const Explore = () => {
   const [actionSuccess, setActionSuccess] = useState('');
   const [recommendations, setRecommendations] = useState({ users: [], teams: [], posts: [] });
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+  // Get filtered results based on active filter
+  const filteredResults = getFilteredResults(searchResults, activeFilter);
 
   // Live search effect (debounced)
   useDebounce(() => {
@@ -123,12 +136,32 @@ const Explore = () => {
     }
   };
 
-  // Team join request action
+  // Track requested/joined state for teams
+  const [teamRequestStatus, setTeamRequestStatus] = useState({}); // { [teamId]: 'requested' | 'joined' }
+
+  // On search results update, set status for each team
+  useEffect(() => {
+    if (filteredResults.teams && user) {
+      const status = {};
+      filteredResults.teams.forEach(t => {
+        const isOwner = t.owner && (t.owner._id === user?._id || t.owner === user?._id);
+        const isMember = t.members && t.members.some(m => (m.user?._id || m.user) === user?._id);
+        const hasRequested = t.joinRequests && t.joinRequests.some(r => r.user === user?._id || r.user?._id === user?._id);
+        if (isOwner) return;
+        if (isMember) status[t._id] = 'joined';
+        else if (hasRequested) status[t._id] = 'requested';
+      });
+      setTeamRequestStatus(status);
+    }
+  }, [filteredResults.teams, user]);
+
+  // Update requestToJoinTeam to update local state
   const requestToJoinTeam = async (teamId) => {
     setActionLoading(teamId);
     setActionSuccess('');
     try {
       await api.post(`/teams/${teamId}/join`);
+      setTeamRequestStatus(prev => ({ ...prev, [teamId]: 'requested' }));
       setActionSuccess('Join request sent!');
     } catch (err) {
       setActionSuccess('Failed to send join request');
@@ -137,17 +170,22 @@ const Explore = () => {
     }
   };
 
-  // Get filtered results based on active filter
-  const getFilteredResults = () => {
-    if (activeFilter === 'all') return searchResults;
-    return {
-      users: activeFilter === 'users' ? searchResults.users : [],
-      teams: activeFilter === 'teams' ? searchResults.teams : [],
-      posts: activeFilter === 'posts' ? searchResults.posts : []
-    };
+  // Update joinTeam for public teams
+  const joinTeamDirect = async (teamId) => {
+    setActionLoading(teamId);
+    setActionSuccess('');
+    try {
+      await api.post(`/teams/${teamId}/join`);
+      setTeamRequestStatus(prev => ({ ...prev, [teamId]: 'joined' }));
+      setActionSuccess('Joined!');
+    } catch (err) {
+      setActionSuccess('Failed to join');
+    } finally {
+      setActionLoading('');
+    }
   };
 
-  const filteredResults = getFilteredResults();
+  // Get filtered results based on active filter
   const totalResults = filteredResults.users.length + filteredResults.teams.length + filteredResults.posts.length;
 
   return (
@@ -257,30 +295,46 @@ const Explore = () => {
                           <motion.div
                             key={t._id}
                             whileHover={{ y: -5 }}
-                            className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all"
+                            className="relative bg-white/5 border border-white/10 rounded-2xl p-0 overflow-hidden backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all shadow-lg"
                             onClick={() => handleNavigation(`/teams/${t._id}`)}
                           >
-                            <div className="flex items-center space-x-4 mb-4">
-                              <img
-                                src={t.avatar || '/default-team.png'}
-                                alt={t.name}
-                                className="w-16 h-16 rounded-full object-cover"
-                              />
-                              <div>
-                                <h3 className="text-lg font-bold text-white">{t.name}</h3>
-                                <p className="text-white/60">{t.memberCount || (t.members ? t.members.length : 0)} members</p>
+                            {/* Team Banner */}
+                            {t.banner && (
+                              <div className="absolute inset-0 z-0 h-32">
+                                <img
+                                  src={t.banner.startsWith('http') ? t.banner : `http://localhost:5000${t.banner}`}
+                                  alt={`${t.name} banner`}
+                                  className="w-full h-32 object-cover opacity-40"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
                               </div>
-                            </div>
-                            <p className="text-white/80 text-sm mb-4">{t.description}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {(t.tags || []).slice(0, 3).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
+                            )}
+                            {/* Card Content */}
+                            <div className="relative z-10 p-4 pt-20 flex flex-col h-full min-h-[170px]">
+                              <div className="mb-1">
+                                <h3 className="text-lg font-bold text-white drop-shadow-lg">{t.name}</h3>
+                                <p className="text-white/60 text-xs">{t.memberCount || (t.members ? t.members.length : 0)} members</p>
+                              </div>
+                              <p className="text-white/80 text-xs mb-2 line-clamp-2">{t.description}</p>
+                              <div className="flex flex-wrap gap-2 mb-1">
+                                {(t.tags || []).slice(0, 3).map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2 mt-auto">
+                                {t.isPublic === false && (
+                                  <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 text-xs rounded-full">Private</span>
+                                )}
+                                {t.isPublic !== false && (
+                                  <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full">Public</span>
+                                )}
+                                <FiArrowRight className="text-white/40 ml-auto" />
+                              </div>
                             </div>
                           </motion.div>
                         ))}
@@ -472,28 +526,35 @@ const Explore = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredResults.teams.map((t) => {
                               const isPrivate = t.isPublic === false;
-                              const isMember = t.members && t.members.some(m => m.user === user?._id);
+                              const isMember = t.members && t.members.some(m => (m.user?._id || m.user) === user?._id);
+                              const isOwner = t.owner && (t.owner._id === user?._id || t.owner === user?._id);
+                              const canRequest = !isOwner && !isMember;
                               return (
                                 <motion.div
                                   key={t._id}
                                   whileHover={{ y: -5 }}
-                                  className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all"
+                                  className="relative bg-white/5 border border-white/10 rounded-2xl p-0 overflow-hidden backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all shadow-lg"
                                   onClick={() => !isPrivate || isMember ? handleNavigation(`/teams/${t._id}`) : undefined}
                                 >
-                                  <div className="flex items-center space-x-4 mb-4">
-                                    <img
-                                      src={t.avatar || '/default-team.png'}
-                                      alt={t.name}
-                                      className="w-16 h-16 rounded-full object-cover"
-                                    />
-                                    <div>
-                                      <h3 className="text-lg font-bold text-white">{t.name}</h3>
-                                      <p className="text-white/60">{t.memberCount || (t.members ? t.members.length : 0)} members</p>
+                                  {/* Team Banner */}
+                                  {t.banner && (
+                                    <div className="absolute inset-0 z-0 h-32">
+                                      <img
+                                        src={t.banner.startsWith('http') ? t.banner : `http://localhost:5000${t.banner}`}
+                                        alt={`${t.name} banner`}
+                                        className="w-full h-32 object-cover opacity-40"
+                                      />
+                                      <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" />
                                     </div>
-                                  </div>
-                                  <p className="text-white/80 text-sm mb-4">{t.description}</p>
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex flex-wrap gap-2">
+                                  )}
+                                  {/* Card Content */}
+                                  <div className="relative z-10 p-4 pt-20 flex flex-col h-full min-h-[170px]">
+                                    <div className="mb-1">
+                                      <h3 className="text-lg font-bold text-white drop-shadow-lg">{t.name}</h3>
+                                      <p className="text-white/60 text-xs">{t.memberCount || (t.members ? t.members.length : 0)} members</p>
+                                    </div>
+                                    <p className="text-white/80 text-xs mb-2 line-clamp-2">{t.description}</p>
+                                    <div className="flex flex-wrap gap-2 mb-1">
                                       {(t.tags || []).slice(0, 3).map((tag) => (
                                         <span
                                           key={tag}
@@ -503,21 +564,37 @@ const Explore = () => {
                                         </span>
                                       ))}
                                     </div>
-                                    {!isPrivate || isMember ? (
-                                      <FiArrowRight className="text-white/40" />
-                                    ) : (
-                                      <button
-                                        className="px-3 py-1 bg-blue-600 text-white rounded-full text-xs hover:bg-blue-700 transition-all disabled:opacity-50"
-                                        disabled={actionLoading === t._id}
-                                        onClick={e => { e.stopPropagation(); requestToJoinTeam(t._id); }}
-                                      >
-                                        {actionLoading === t._id ? 'Requesting...' : 'Request to Join'}
-                                      </button>
-                                    )}
+                                    <div className="flex items-center gap-2 mt-auto flex-wrap">
+                                      {t.isPublic === false && (
+                                        <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 text-xs rounded-full">Private</span>
+                                      )}
+                                      {t.isPublic !== false && (
+                                        <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded-full">Public</span>
+                                      )}
+                                      {/* Request/Join Button */}
+                                      {canRequest && (
+                                        <button
+                                          onClick={e => {
+                                            e.stopPropagation();
+                                            if (isPrivate) requestToJoinTeam(t._id);
+                                            else joinTeamDirect(t._id);
+                                          }}
+                                          disabled={actionLoading === t._id || teamRequestStatus[t._id] === 'requested' || teamRequestStatus[t._id] === 'joined'}
+                                          className="bg-white text-black font-zentry font-bold uppercase tracking-widest px-7 py-3 rounded-full shadow hover:bg-yellow-200 active:scale-95 transition text-xs mt-2"
+                                          style={{ minWidth: 120 }}
+                                        >
+                                          {actionLoading === t._id
+                                            ? (isPrivate ? 'Requesting...' : 'Joining...')
+                                            : teamRequestStatus[t._id] === 'requested'
+                                              ? 'Requested'
+                                              : teamRequestStatus[t._id] === 'joined'
+                                                ? 'Joined'
+                                                : (isPrivate ? 'Request to Join' : 'Join')}
+                                        </button>
+                                      )}
+                                      <FiArrowRight className="text-white/40 ml-auto" />
+                                    </div>
                                   </div>
-                                  {isPrivate && !isMember && (
-                                    <div className="mt-2 text-xs text-white/60">Private team: Only limited info visible</div>
-                                  )}
                                 </motion.div>
                               );
                             })}

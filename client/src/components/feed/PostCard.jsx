@@ -7,7 +7,7 @@ import { FiHeart, FiMessageSquare, FiShare, FiMoreVertical, FiTrash, FiGlobe, Fi
 import MediaCarousel from '../MediaCarousel';
 import EmojiPicker from 'emoji-picker-react';
 
-const PostCard = ({ post }) => {
+const PostCard = ({ post, onDelete, onEdit }) => {
   const { likePost, unlikePost, addComment, deletePost, sharePost, updatePost, savePost, unsavePost } = useFeed();
   const { user } = useAuth();
   const [comment, setComment] = useState('');
@@ -65,6 +65,7 @@ const PostCard = ({ post }) => {
     if (window.confirm('Are you sure you want to delete this post?')) {
       try {
         await deletePost(post._id);
+        if (onDelete) onDelete(post._id); // Notify parent
       } catch (error) {
         console.error('Error deleting post:', error);
       }
@@ -127,12 +128,13 @@ const PostCard = ({ post }) => {
     e.preventDefault();
     try {
       setIsEditing(true);
-      await updatePost(post._id, {
+      const updated = await updatePost(post._id, {
         content: editContent,
         tags: editTags,
         visibility: editVisibility
       });
       setShowEditModal(false);
+      if (onEdit && updated) onEdit(updated); // Notify parent with updated post
     } catch (error) {
       // Optionally show error
     } finally {

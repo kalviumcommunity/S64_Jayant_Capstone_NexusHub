@@ -1,23 +1,47 @@
 const Team = require('../models/teamModel');
 const User = require('../models/userModel');
 const Project = require('../models/projectModel');
+const cloudinary = require('../config/cloudinary');
 
 // Create a new team
 exports.createTeam = async (req, res) => {
   try {
     const { name, description, isPublic, tags, initialProject } = req.body;
     
-    // Create the team
-    const team = new Team({
+    let bannerUrl = null;
+    
+    // Handle banner upload if file is provided
+    if (req.file) {
+      try {
+        // Convert buffer to base64
+        const base64Image = req.file.buffer.toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+        
+        const result = await cloudinary.uploader.upload(dataURI, {
+          folder: 'team-banners',
+          resource_type: 'auto'
+        });
+        bannerUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error('Error uploading banner:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to upload banner image'
+        });
+      }
+    }
+    
+    // Create team with banner field
+    const teamData = {
       name,
       description,
       owner: req.user._id,
       isPublic: isPublic !== undefined ? isPublic : true,
       tags: tags || [],
-      members: [{ user: req.user._id, role: 'admin' }],
-      projects: [] // Initialize empty projects array
-    });
+      banner: bannerUrl
+    };
     
+    const team = new Team(teamData);
     await team.save();
     
     // If initialProject is provided, create a default project for this team
@@ -222,39 +246,92 @@ exports.getTeam = async (req, res) => {
 // Update a team
 exports.updateTeam = async (req, res) => {
   try {
-    const { name, description, isPublic, tags, avatar } = req.body;
+    console.log('=== updateTeam called ===');
+    console.log('req.body:', req.body);
+    console.log('req.file:', req.file);
+    console.log('req.params.id:', req.params.id);
+    
+    const { name, description, isPublic, tags } = req.body;
     
     const team = await Team.findById(req.params.id);
     
     if (!team) {
+      console.error('Team not found for ID:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Team not found'
       });
     }
     
-    // Check if user is the owner
-    if (team.owner.toString() !== req.user._id.toString()) {
+    console.log('Found team:', team.name);
+    
+    // Check if user is the owner or admin
+    const isOwner = team.owner.toString() === req.user._id.toString();
+    const isAdmin = team.members.some(member => 
+      member.user.toString() === req.user._id.toString() && member.role === 'admin'
+    );
+    
+    console.log('isOwner:', isOwner, 'isAdmin:', isAdmin);
+    
+    if (!isOwner && !isAdmin) {
+      console.error('User not authorized to update team');
       return res.status(403).json({
         success: false,
-        message: 'Only the team owner can update team details'
+        message: 'Only the team owner or admins can update team details'
       });
     }
     
-    // Update fields
-    if (name) team.name = name;
-    if (description) team.description = description;
-    if (isPublic !== undefined) team.isPublic = isPublic;
-    if (tags) team.tags = tags;
-    if (avatar) team.avatar = avatar;
+    let bannerUrl = team.banner; // Keep existing banner by default
     
+    // Handle banner upload if file is provided
+    if (req.file) {
+      console.log('Processing banner upload...');
+      try {
+        // Convert buffer to base64
+        const base64Image = req.file.buffer.toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+        
+        const result = await cloudinary.uploader.upload(dataURI, {
+          folder: 'team-banners',
+          resource_type: 'auto'
+        });
+        bannerUrl = result.secure_url;
+        console.log('Banner uploaded successfully:', bannerUrl);
+      } catch (uploadError) {
+        console.error('Error uploading banner:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to upload banner image'
+        });
+      }
+    } else {
+      console.log('No banner file provided, keeping existing banner');
+    }
+    
+    // Update fields
+    const updateData = {
+      name: name || team.name,
+      description: description || team.description,
+      isPublic: isPublic !== undefined ? isPublic : team.isPublic,
+      tags: tags || team.tags,
+      banner: bannerUrl
+    };
+    
+    console.log('Update data:', updateData);
+    
+    // Update team with new data
+    Object.assign(team, updateData);
     await team.save();
+    
+    console.log('Team updated successfully');
     
     res.status(200).json({
       success: true,
       data: team
     });
   } catch (error) {
+    console.error('Error in updateTeam:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to update team',
@@ -675,21 +752,22 @@ exports.updateMemberRole = async (req, res) => {
   }
 };
 
-// Suggested Teams (by tags/skills, exclude already joined)
+// Suggested Teams (by tags/skills, friends, or random public teams)
 exports.suggestedTeams = async (req, res) => {
+  console.log('==== suggestedTeams called ====');
   try {
-    const currentUser = await User.findById(req.user.id);
-    console.log('suggestedTeams: currentUser:', currentUser);
-    if (!currentUser) return res.status(404).json({ success: false, message: 'User not found' });
-
-    // If user has no skills, return empty suggestions
-    if (!currentUser.skills || !Array.isArray(currentUser.skills) || currentUser.skills.length === 0) {
-      console.log('suggestedTeams: user has no skills');
-      return res.json({ success: true, teams: [] });
+    console.log('req.user:', req.user);
+    if (!req.user || !req.user._id) {
+      console.error('No user or user._id in req.user:', req.user);
+      return res.status(401).json({ success: false, message: 'Unauthorized: User not found in request.' });
     }
-    console.log('suggestedTeams: user skills:', currentUser.skills);
+    const currentUser = await User.findById(req.user._id).populate(['followers', 'following']);
+    if (!currentUser) {
+      console.error('User not found in DB for _id:', req.user._id);
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
 
-    // Get all teams where user is not a member
+    // Get all teams where user is already a member or owner
     const myTeamIds = new Set();
     const myTeams = await Team.find({
       $or: [
@@ -698,24 +776,92 @@ exports.suggestedTeams = async (req, res) => {
       ]
     });
     myTeams.forEach(t => myTeamIds.add(t._id.toString()));
-    console.log('suggestedTeams: myTeamIds:', Array.from(myTeamIds));
 
-    // Find teams with matching tags (skills)
-    const query = {
-      _id: { $nin: Array.from(myTeamIds) },
-      tags: { $in: currentUser.skills }
-    };
-    console.log('suggestedTeams: Team.find query:', query);
-    const tagTeams = await Team.find(query)
-      .populate('owner', 'name username profilePicture')
-      .populate('members.user', 'name username profilePicture')
-      .sort({ createdAt: -1 });
+    let suggestions = [];
+
+    // 1. If user has skills, suggest teams matching those skills
+    if (currentUser.skills && Array.isArray(currentUser.skills) && currentUser.skills.length > 0) {
+      const skillTeams = await Team.find({
+        _id: { $nin: Array.from(myTeamIds) },
+        tags: { $in: currentUser.skills }
+      })
+        .populate('owner', 'name username profilePicture')
+        .populate('members.user', 'name username profilePicture')
+        .sort({ createdAt: -1 });
+      suggestions = skillTeams;
+    }
+
+    // 2. If no skills or not enough suggestions, suggest teams joined by friends (followers/following)
+    if (suggestions.length < 10 && (currentUser.followers.length > 0 || currentUser.following.length > 0)) {
+      const friendIds = [
+        ...currentUser.followers.map(f => f._id ? f._id : f),
+        ...currentUser.following.map(f => f._id ? f._id : f)
+      ];
+      // Remove duplicates and self
+      const uniqueFriendIds = [...new Set(friendIds.filter(id => id.toString() !== currentUser._id.toString()))];
+      if (uniqueFriendIds.length > 0) {
+        const friendTeams = await Team.find({
+          _id: { $nin: Array.from(myTeamIds) },
+          'members.user': { $in: uniqueFriendIds }
+        })
+          .populate('owner', 'name username profilePicture')
+          .populate('members.user', 'name username profilePicture')
+          .sort({ createdAt: -1 });
+        // Add only new teams not already in suggestions
+        const friendTeamIds = new Set(suggestions.map(t => t._id.toString()));
+        friendTeams.forEach(t => {
+          if (!friendTeamIds.has(t._id.toString())) suggestions.push(t);
+        });
+      }
+    }
+
+    // 3. If still not enough, suggest random public teams (not already joined)
+    if (suggestions.length < 10) {
+      // Pick a random real user (not current user) with skills
+      const randomUser = await User.findOne({ _id: { $ne: currentUser._id }, skills: { $exists: true, $not: { $size: 0 } } });
+      let randomSkillTeams = [];
+      if (randomUser && randomUser.skills && randomUser.skills.length > 0) {
+        randomSkillTeams = await Team.find({
+          _id: { $nin: Array.from(myTeamIds) },
+          tags: { $in: randomUser.skills }
+        })
+          .populate('owner', 'name username profilePicture')
+          .populate('members.user', 'name username profilePicture')
+          .sort({ createdAt: -1 });
+      }
+      // Add only new teams
+      const suggestionIds = new Set(suggestions.map(t => t._id.toString()));
+      randomSkillTeams.forEach(t => {
+        if (!suggestionIds.has(t._id.toString())) suggestions.push(t);
+      });
+      // If still not enough, just add random public teams
+      if (suggestions.length < 10) {
+        const publicTeams = await Team.find({
+          _id: { $nin: Array.from(myTeamIds) },
+          isPublic: true
+        })
+          .populate('owner', 'name username profilePicture')
+          .populate('members.user', 'name username profilePicture')
+          .sort({ createdAt: -1 })
+          .limit(20); // get more to filter out duplicates
+        publicTeams.forEach(t => {
+          if (!suggestions.some(s => s._id.toString() === t._id.toString())) suggestions.push(t);
+        });
+      }
+    }
 
     // Limit to 10 suggestions
-    const suggestions = tagTeams.slice(0, 10);
-    res.json({ success: true, teams: suggestions });
+    suggestions = suggestions.slice(0, 10);
+    return res.json({ success: true, teams: suggestions });
   } catch (error) {
     console.error('Error in suggestedTeams:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch suggested teams', error: error.message });
+    if (typeof error === 'object' && error.stack) {
+      console.error('Stack:', error.stack);
+    }
+    try {
+      console.error('req.user in catch:', req.user);
+    } catch (e) {}
+    // Never return 500 for empty suggestions, only for real server errors
+    return res.json({ success: true, teams: [] });
   }
 };
