@@ -1,32 +1,34 @@
-# 🚀 NexusHub
+# NexusHub
 
 **NexusHub** is a hybrid social-enterprise platform built with the **MERN Stack**, designed for **businesses, creators, freelancers, and teams** to collaborate, communicate, and manage work in one unified space.
 
 ---
 
-## 📌 Overview
+## Overview
 
 NexusHub combines **real-time messaging**, **task/project management**, and **social-style content sharing** into one modern platform — a single hub for productivity, teamwork, and creative expression.
 
+https://github.com/user-attachments/assets/ebb8aabb-0fc6-4d97-be11-6f41e25390e0
+
 ---
 
-## 🌟 Core Features
+## Core Features
 
 ### 🔹 Level 1 – MVP (MERN Stack)
 
-- ✅ User Authentication (Signup/Login with role-based access)
-- ✅ Real-Time Chat (1:1 & Group messaging)
-- ✅ Feed System (Post text & images)
-- ✅ Task & Project Management (Assign & track tasks)
-- ✅ Role-Based Access (Admin, Manager, Member)
+-  User Authentication (Signup/Login with role-based access)
+-  Real-Time Chat (1:1 & Group messaging)
+-  Feed System (Post text & images)
+-  Task & Project Management (Assign & track tasks)
+-  Role-Based Access (Admin, Manager, Member)
 
 ### 🔹 Level 2 – Future Enhancements
 
-- 🚀 Voice & Video Calls with AI meeting summaries  
-- 🚀 AI-Powered Feed Curation (Smart, relevant content)  
-- 🚀 Portfolio Showcase (Upload images/videos of user work)  
-- 🚀 Automated Workflows for task triggers and smart actions  
-- 🚀 *(Optional)* Digital Marketplace (For service/product showcasing)
+-  Voice & Video Calls with AI meeting summaries  
+-  AI-Powered Feed Curation (Smart, relevant content)  
+-  Portfolio Showcase (Upload images/videos of user work)  
+-  Automated Workflows for task triggers and smart actions  
+-  *(Optional)* Digital Marketplace (For service/product showcasing)
 
 ---
 
@@ -44,35 +46,35 @@ NexusHub combines **real-time messaging**, **task/project management**, and **so
 
 ---
 
-## 📅 4-Week Development Plan
+## 4-Week Development Plan
 
-### 🟦 Week 1: Planning & Design
+### Week 1: Planning & Design
 - Define user roles and use cases
 - Wireframes + UX flow in Figma
 - Setup project structure and GitHub
 - Initialize frontend and backend
 - MongoDB connection setup
 
-### 🟧 Week 2: Frontend
+### Week 2: Frontend
 - Implement Signup/Login pages
 - Auth context + Protected routes
 - Feed + Chat UI
 - Task management components
 
-### 🟨 Week 3: Backend
+### Week 3: Backend
 - Models: User, Post, Task, Message
 - JWT Auth + RBAC
 - CRUD APIs for tasks, posts, and chat
 - Socket.io real-time chat integration
 
-### 🟩 Week 4: Final Touches
+### Week 4: Final Touches
 - Polish UI and add responsiveness
 - End-to-end testing
 - Deployment to Vercel & Render
 
 ---
 
-## 🙌 Who Can Use NexusHub?
+## Who Can Use NexusHub?
 
 - **Startups & Businesses** – Manage teams, tasks, and updates from one place.
 - **Freelancers & Creators** – Share updates, chat with clients, and organize work.
@@ -81,7 +83,7 @@ NexusHub combines **real-time messaging**, **task/project management**, and **so
 ---
 
 ### From here you can take a look on my site's Frontend : ###
-`nexushubb.netlify.app`
+[nexushubb.netlify.app](nexushubb.netlify.app)
 
 ### Here is my Backend Deployment Link : ###
-`https://nexushub-backend.onrender.com`
+[https://nexushub-backend.onrender.com](https://nexushub-backend.onrender.com)
