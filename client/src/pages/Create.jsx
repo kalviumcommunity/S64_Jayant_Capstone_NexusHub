@@ -99,7 +99,7 @@ const Create = () => {
       {/* Fixed Background Video */}
       <video
         className="fixed top-0 left-0 w-full h-full object-cover z-0"
-        src="/videos/NexusCrystal.mp4"
+        src="https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063941/NexusCrystal_imby9z.mp4"
         autoPlay
         loop
         muted

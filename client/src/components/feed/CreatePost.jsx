@@ -203,7 +203,7 @@ const CreatePost = () => {
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">
           <img 
-            src={user?.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.profilePicture}` : '/img/default-avatar.png'} 
+            src={user?.profilePicture ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${user.profilePicture}` : 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'} 
             alt={user?.name} 
             className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50"
           />

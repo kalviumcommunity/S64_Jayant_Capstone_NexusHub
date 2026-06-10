@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema({
   website: String,
   profilePicture: {
     type: String,
-    default: 'default-avatar.png'
+    default: 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'
   },
   skills: {
     type: [String],

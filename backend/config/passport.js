@@ -55,7 +55,7 @@ if (process.env.GOOGLE_CLIENT_ID &&
             username: profile.emails[0].value.split('@')[0] + crypto.randomBytes(4).toString('hex'),
             password: randomPassword,
             isEmailVerified: true, // Auto-verify email for OAuth users
-            profilePicture: profile.photos[0]?.value || 'default-avatar.png'
+            profilePicture: profile.photos[0]?.value || 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'
           });
 
           return done(null, user);
@@ -113,7 +113,7 @@ if (process.env.GITHUB_CLIENT_ID &&
             username: profile.username + crypto.randomBytes(4).toString('hex'),
             password: randomPassword,
             isEmailVerified: true, // Auto-verify email for OAuth users
-            profilePicture: profile.photos && profile.photos[0] ? profile.photos[0].value : 'default-avatar.png',
+            profilePicture: profile.photos && profile.photos[0] ? profile.photos[0].value : 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif',
             socialLinks: {
               github: profile.profileUrl
             }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiUsers, FiFolder, FiCalendar, FiCheckCircle, FiClock, FiActivity, FiAlertCircle } from 'react-icons/fi';
+import { FiUsers, FiFolder, FiCalendar, FiCheckCircle, FiClock, FiActivity, FiAlertCircle, FiMessageSquare } from 'react-icons/fi';
 import api from '../utils/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -8,6 +9,7 @@ const TeamDetails = ({ teamId, onClose }) => {
   console.log('TeamDetails component rendered with teamId:', teamId);
   
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [team, setTeam] = useState(null);
   const [teamProjects, setTeamProjects] = useState([]);
   const [teamMembers, setTeamMembers] = useState({
@@ -260,7 +262,7 @@ const TeamDetails = ({ teamId, onClose }) => {
       <div className="relative min-h-screen w-full overflow-x-hidden pt-20">
         {/* Background Video */}
         <video className="fixed inset-0 w-full h-full object-cover z-0" autoPlay muted loop>
-          <source src="/videos/NexusCrystal.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063941/NexusCrystal_imby9z.mp4" type="video/mp4" />
         </video>
         <div className="relative z-10">
           {/* Team Header with Banner */}
@@ -295,6 +297,16 @@ const TeamDetails = ({ teamId, onClose }) => {
                 </div>
               </div>
               <p className="text-white/80 text-base md:text-lg max-w-2xl drop-shadow-md">{team.description}</p>
+              <div className="flex flex-wrap gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/chat?teamId=${teamId}`)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-100 font-robert-medium hover:bg-blue-500/30 transition-all shadow-lg border border-blue-400/20"
+                >
+                  <FiMessageSquare />
+                  Open Team Chat
+                </button>
+              </div>
               <button 
                 onClick={onClose}
                 className="absolute top-4 right-4 px-4 py-2 rounded-full bg-white/10 text-white/80 font-robert-medium hover:bg-white/20 hover:text-white transition-all shadow-lg border border-white/10"

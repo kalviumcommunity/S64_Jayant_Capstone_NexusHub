@@ -230,7 +230,7 @@ const StoryViewer = () => {
                 {viewersList.length === 0 && <div className="text-white/60">No viewers yet.</div>}
                 {viewersList.map((v, i) => (
                   <div key={i} className="flex items-center gap-3 mb-4">
-                    <img src={v.user.profilePicture || '/img/default-avatar.png'} alt={v.user.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50" />
+                    <img src={v.user.profilePicture || 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'} alt={v.user.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50" />
                     <div className="flex-1">
                       <div className="text-white font-semibold text-base">{v.user.name}</div>
                       <div className="text-xs text-white/50">{v.user.email}</div>
@@ -272,7 +272,7 @@ const StoryViewer = () => {
             {/* Username and time ago in a column */}
             <div className="flex flex-col items-start gap-0">
             <div className="flex items-center gap-3">
-              <img src={currStory.user.profilePicture || '/img/default-avatar.png'} alt={currStory.user.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50" />
+              <img src={currStory.user.profilePicture || 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'} alt={currStory.user.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50" />
               <span className="text-white font-semibold text-base">{currStory.user.name}</span>
             </div>
               <span className="text-xs text-white/50 ml-12 mt-0.5">{getTimeAgo(currStory.createdAt)}</span>

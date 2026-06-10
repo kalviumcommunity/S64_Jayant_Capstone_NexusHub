@@ -22,6 +22,7 @@ import StoryViewer from './pages/StoryViewer'
 import Create from './pages/Create'
 import Notifications from './pages/Notifications'
 import Saved from './pages/Saved'
+import Chat from './pages/Chat'
 
 import { AuthProvider } from './context/AuthContext.jsx'
 import { TaskProvider } from './context/TaskContext.jsx'
@@ -66,6 +67,7 @@ const AppContent = () => {
             <Route path="/explore" element={<Explore />} />
             <Route path="/profile/:username" element={<ViewProfile />} />
             <Route path="/story/:id" element={<StoryViewer />} />
+            <Route path="/chat" element={<Chat />} />
             {/* Add other protected routes here */}
           </Route>
         </Routes>

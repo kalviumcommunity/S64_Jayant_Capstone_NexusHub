@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiTag, FiAlertCircle, FiActivity } from 'react-icons/fi';
+import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiTag, FiAlertCircle, FiActivity, FiMessageSquare } from 'react-icons/fi';
 import api from '../utils/api.js';
 import ActivityFeed from './ActivityFeed';
 
 const ProjectDetails = ({ projectId, onClose }) => {
+  const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [team, setTeam] = useState(null);
@@ -260,6 +262,16 @@ const ProjectDetails = ({ projectId, onClose }) => {
                 {tag}
               </span>
             ))}
+          </div>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <button
+              type="button"
+              onClick={() => navigate(`/chat?projectId=${projectId}`)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-100 font-robert-medium hover:bg-blue-500/30 transition-all shadow-lg border border-blue-400/20"
+            >
+              <FiMessageSquare />
+              Open Project Chat
+            </button>
           </div>
         </div>
         <button 

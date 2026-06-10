@@ -193,7 +193,7 @@ const Explore = () => {
       {/* Video Background */}
       <video
         className="fixed inset-0 w-full h-full object-cover z-0"
-        src="/videos/NexusCrystal.mp4"
+        src="https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063941/NexusCrystal_imby9z.mp4"
         autoPlay
         loop
         muted
@@ -258,7 +258,7 @@ const Explore = () => {
                           >
                             <div className="flex items-center space-x-4 mb-4">
                               <img
-                                src={u.profilePicture || '/default-avatar.png'}
+                                src={u.profilePicture || 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'}
                                 alt={u.name || u.username}
                                 className="w-16 h-16 rounded-full object-cover"
                               />
@@ -358,7 +358,7 @@ const Explore = () => {
                           >
                             <div className="flex items-start space-x-4">
                               <img
-                                src={post.author?.profilePicture || '/default-avatar.png'}
+                                src={post.author?.profilePicture || 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'}
                                 alt={post.author?.name || post.author?.username}
                                 className="w-12 h-12 rounded-full object-cover"
                               />
@@ -474,7 +474,7 @@ const Explore = () => {
                                 >
                                   <div className="flex items-center space-x-4 mb-4">
                                     <img
-                                      src={u.profilePicture || '/default-avatar.png'}
+                                      src={u.profilePicture || 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'}
                                       alt={u.name || u.username}
                                       className="w-16 h-16 rounded-full object-cover"
                                     />
@@ -618,7 +618,7 @@ const Explore = () => {
                               >
                                 <div className="flex items-start space-x-4">
                                   <img
-                                    src={post.author?.profilePicture || '/default-avatar.png'}
+                                    src={post.author?.profilePicture || 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'}
                                     alt={post.author?.name || post.author?.username}
                                     className="w-12 h-12 rounded-full object-cover"
                                   />

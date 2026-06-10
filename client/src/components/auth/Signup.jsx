@@ -135,7 +135,7 @@ const Signup = () => {
         {/* Navigation Buttons - Higher z-index */}
         <div className="absolute top-4 left-4 z-50">
           <Link to="/">
-            <img src="/img/logo.png" alt="logo" className="w-10 hover:scale-110 transition-transform" />
+            <img src="https://res.cloudinary.com/dyzfbhol5/image/upload/v1781062989/logo_fh4vwl.png" alt="logo" className="w-10 hover:scale-110 transition-transform" />
           </Link>
         </div>
         <div className="absolute top-4 right-4 z-[110]">
@@ -308,7 +308,7 @@ const Signup = () => {
         loop
         autoPlay
       >
-        <source src="/videos/NexusCrystal.mp4" type="video/mp4" />
+        <source src="https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063941/NexusCrystal_imby9z.mp4" type="video/mp4" />
       </video>
 
       {/* Overlay - Low z-index */}
@@ -395,7 +395,7 @@ export default Signup;
 //       {/* Navigation Buttons */}
 //       <div className="absolute top-4 left-4 z-50">
 //         <Link to="/">
-//           <img src="/img/logo.png" alt="logo" className="w-10 hover:scale-110 transition-transform" />
+//           <img src="https://res.cloudinary.com/dyzfbhol5/image/upload/v1781062989/logo_fh4vwl.png" alt="logo" className="w-10 hover:scale-110 transition-transform" />
 //         </Link>
 //       </div>
 //       <div className="absolute top-4 right-4 z-50">
@@ -415,7 +415,7 @@ export default Signup;
 //         muted
 //         loop
 //       >
-//         <source src="/videos/NexusCrystal.mp4" type="video/mp4" />
+//         <source src="https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063941/NexusCrystal_imby9z.mp4" type="video/mp4" />
 //       </video>
 
 //       {/* Overlay */}

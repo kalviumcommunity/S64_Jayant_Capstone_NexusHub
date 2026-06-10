@@ -22,6 +22,14 @@ const chatSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
   },
+  teamId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Team"
+  },
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Project"
+  },
   groupImage: {
     type: String,
     default: "default-group.png"
@@ -33,5 +41,8 @@ const chatSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+chatSchema.index({ teamId: 1 }, { sparse: true });
+chatSchema.index({ projectId: 1 }, { sparse: true });
 
 module.exports = mongoose.model("Chat", chatSchema); 

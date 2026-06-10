@@ -189,7 +189,7 @@ const PostCard = ({ post, onDelete, onEdit }) => {
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-3">
           <Link to={`/profile/${post.author._id}`} className="flex-shrink-0">
-            <img src={post.author.profilePicture ? (post.author.profilePicture.startsWith('http') ? post.author.profilePicture : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}`) : '/img/default-avatar.png'} alt={post.author.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50" />
+            <img src={post.author.profilePicture ? (post.author.profilePicture.startsWith('http') ? post.author.profilePicture : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${post.author.profilePicture}`) : 'https://res.cloudinary.com/dyzfbhol5/image/upload/v1781064676/default-avatar_bbvlmt.avif'} alt={post.author.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/50" />
           </Link>
           <div>
             <Link to={`/profile/${post.author._id}`} className="text-white font-semibold hover:text-purple-400 transition-colors text-base">{post.author.name}</Link>

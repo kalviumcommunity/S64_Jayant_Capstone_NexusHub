@@ -118,7 +118,7 @@ const Login = () => {
         playsInline
         muted
       >
-        <source src="/videos/Intro.mp4" type="video/mp4" />
+        <source src="https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063941/NexusCrystal_imby9z.mp4" type="video/mp4" />
       </video>
 
       {/* Background Video */}
@@ -129,7 +129,7 @@ const Login = () => {
         muted
         loop
       >
-        <source src="/videos/NexusCrystal.mp4" type="video/mp4" />
+        <source src="https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063013/Intro_pwo3uc.mp4" type="video/mp4" />
       </video>
 
       {/* Overlay */}
@@ -140,7 +140,7 @@ const Login = () => {
         {/* Navigation Buttons - Higher z-index */}
         <div className="absolute top-4 left-4 z-[110]">
           <Link to="/">
-            <img src="/img/logo.png" alt="logo" className="w-10 hover:scale-110 transition-transform" />
+            <img src="https://res.cloudinary.com/dyzfbhol5/image/upload/v1781062989/logo_fh4vwl.png" alt="logo" className="w-10 hover:scale-110 transition-transform" />
           </Link>
         </div>
         <div className="absolute top-4 right-4 z-[110]">

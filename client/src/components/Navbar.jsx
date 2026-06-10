@@ -23,6 +23,7 @@ const publicNavItems = [
 const privateNavItems = [
   { name: "Feed", type: "route", path: "/feed" },
   { name: "Explore", type: "route", path: "/explore" },
+  { name: "Chat", type: "route", path: "/chat" },
   { name: "Dashboard", type: "route", path: "/dashboard" }
 ];
 
@@ -173,7 +174,7 @@ const NavBar = () => {
                   pageTransition.navigate(navigate, '/');
                 }
               }} className="logo-container">
-                <img src="/img/logo.png" alt="logo" className="w-10" />
+                <img src="https://res.cloudinary.com/dyzfbhol5/image/upload/v1781062989/logo_fh4vwl.png" alt="logo" className="w-10" />
                 <span className="logo-text">NexusHub</span>
               </a>
             </div>

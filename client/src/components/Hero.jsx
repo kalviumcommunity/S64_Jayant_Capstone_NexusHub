@@ -84,7 +84,16 @@ const Hero = () => {
     });
   });
 
-  const getVideoSrc = (index) => `videos/hero-${index}.mp4`;
+  const getVideoSrc = (index) => {
+    const videoMap = {
+      1: "https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063030/hero-1_bzsgbc.mp4",
+      2: "https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063043/hero-2_shzs0m.mp4",
+      3: "https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063035/hero-3_rxlpqf.mp4",
+      4: "https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063064/hero-4_njlq9p.mp4",
+    };
+
+    return videoMap[index];
+  };
 
   return (
     <div className="relative h-dvh w-screen overflow-x-hidden">

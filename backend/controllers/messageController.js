@@ -15,6 +15,24 @@ exports.sendMessage = async (req, res) => {
       });
     }
 
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        message: 'Chat not found'
+      });
+    }
+
+    const isMember = (chat.users || []).some(userId => userId.toString() === req.user._id.toString());
+
+    if (!isMember) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not a member of this chat'
+      });
+    }
+
     let newMessage = {
       sender: req.user._id,
       content: content || "",
@@ -31,7 +49,7 @@ exports.sendMessage = async (req, res) => {
       select: "name email profilePicture"
     });
 
-    await Chat.findByIdAndUpdate(chatId, { latestMessage: message });
+    await Chat.findByIdAndUpdate(chatId, { latestMessage: message._id });
 
     // Emit socket event
     getIO().to(chatId).emit('new_message', message);
@@ -52,9 +70,28 @@ exports.sendMessage = async (req, res) => {
 // Get all messages for a chat
 exports.allMessages = async (req, res) => {
   try {
+    const chat = await Chat.findById(req.params.chatId);
+
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        message: 'Chat not found'
+      });
+    }
+
+    const isMember = (chat.users || []).some(userId => userId.toString() === req.user._id.toString());
+
+    if (!isMember) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not a member of this chat'
+      });
+    }
+
     const messages = await Message.find({ chat: req.params.chatId })
       .populate("sender", "name email profilePicture")
-      .populate("chat");
+      .populate("chat")
+      .sort({ createdAt: 1 });
 
     res.json({
       success: true,
@@ -72,6 +109,24 @@ exports.allMessages = async (req, res) => {
 // Mark messages as read
 exports.markAsRead = async (req, res) => {
   try {
+    const chat = await Chat.findById(req.params.chatId);
+
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        message: 'Chat not found'
+      });
+    }
+
+    const isMember = (chat.users || []).some(userId => userId.toString() === req.user._id.toString());
+
+    if (!isMember) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not a member of this chat'
+      });
+    }
+
     await Message.updateMany(
       {
         chat: req.params.chatId,

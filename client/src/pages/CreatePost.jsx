@@ -19,7 +19,7 @@ const CreatePostPage = () => {
       <div className="relative min-h-screen w-full bg-gradient-to-br from-[#0A0A0A] to-[#1F1F1F]">
         {/* Background Video */}
         <video className="absolute inset-0 w-full h-full object-cover opacity-30" autoPlay muted loop>
-          <source src="/videos/NexusCrystal.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/dyzfbhol5/video/upload/v1781063941/NexusCrystal_imby9z.mp4" type="video/mp4" />
         </video>
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />

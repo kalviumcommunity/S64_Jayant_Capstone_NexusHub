@@ -1,5 +1,81 @@
 const Chat = require('../models/chatModel');
 const User = require('../models/userModel');
+const Team = require('../models/teamModel');
+const Project = require('../models/projectModel');
+
+const normalizeIds = (values = []) => {
+  const ids = new Set();
+
+  values.forEach((value) => {
+    if (!value) {
+      return;
+    }
+
+    const id = typeof value === 'object'
+      ? (value._id || value.id || value.user?._id || value.user)
+      : value;
+
+    if (id) {
+      ids.add(id.toString());
+    }
+  });
+
+  return [...ids];
+};
+
+const populateChat = async (chat) => {
+  if (!chat) {
+    return chat;
+  }
+
+  const populatedChat = await chat.populate([
+    { path: 'users', select: 'name email username profilePicture' },
+    { path: 'groupAdmin', select: 'name email username profilePicture' },
+    { path: 'latestMessage' },
+    { path: 'teamId', select: 'name description owner members projects' },
+    { path: 'projectId', select: 'title description createdBy team teamId' }
+  ]);
+
+  if (populatedChat.latestMessage) {
+    await populatedChat.populate('latestMessage.sender', 'name email username profilePicture');
+  }
+
+  return populatedChat;
+};
+
+const buildTeamParticipants = async (teamId) => {
+  const team = await Team.findById(teamId)
+    .populate('owner', 'name email username profilePicture')
+    .populate('members.user', 'name email username profilePicture');
+
+  if (!team) {
+    return null;
+  }
+
+  const participants = [team.owner, ...(team.members || []).map(member => member.user)];
+  return { team, participants: normalizeIds(participants) };
+};
+
+const buildProjectParticipants = async (projectId) => {
+  const project = await Project.findById(projectId)
+    .populate('createdBy', 'name email username profilePicture')
+    .populate('team.user', 'name email username profilePicture');
+
+  if (!project) {
+    return null;
+  }
+
+  let participants = [project.createdBy, ...(project.team || []).map(member => member.user)];
+
+  if (project.teamId) {
+    const teamBundle = await buildTeamParticipants(project.teamId);
+    if (teamBundle?.participants) {
+      participants = [...participants, ...teamBundle.participants];
+    }
+  }
+
+  return { project, participants: normalizeIds(participants) };
+};
 
 // Access chat or create new one (1-on-1)
 exports.accessChat = async (req, res) => {
@@ -13,6 +89,15 @@ exports.accessChat = async (req, res) => {
       });
     }
 
+    const otherUser = await User.findById(userId).select('name email username profilePicture');
+
+    if (!otherUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
     let chat = await Chat.findOne({
       isGroupChat: false,
       users: {
@@ -23,16 +108,16 @@ exports.accessChat = async (req, res) => {
     .populate("latestMessage");
 
     if (chat) {
-      await chat.populate("latestMessage.sender", "name email profilePicture");
+      chat = await populateChat(chat);
     } else {
       // Create new chat
       chat = await Chat.create({
-        chatName: "sender",
+        chatName: otherUser.name || otherUser.username || 'Direct Chat',
         isGroupChat: false,
         users: [req.user._id, userId]
       });
 
-      chat = await chat.populate("users", "-password");
+      chat = await populateChat(chat);
     }
 
     res.json({
@@ -56,6 +141,8 @@ exports.fetchChats = async (req, res) => {
     })
       .populate("users", "-password")
       .populate("groupAdmin", "-password")
+      .populate("teamId")
+      .populate("projectId")
       .populate("latestMessage")
       .sort({ updatedAt: -1 });
 
@@ -77,10 +164,80 @@ exports.fetchChats = async (req, res) => {
   }
 };
 
+const createContextChat = async ({ req, res, contextType, contextId }) => {
+  try {
+    let contextBundle = null;
+    let existingChatQuery = { isGroupChat: true };
+    let chatPayload = {};
+
+    if (contextType === 'team') {
+      contextBundle = await buildTeamParticipants(contextId);
+
+      if (!contextBundle) {
+        return res.status(404).json({
+          success: false,
+          message: 'Team not found'
+        });
+      }
+
+      existingChatQuery.teamId = contextId;
+      chatPayload = {
+        chatName: contextBundle.team.name,
+        users: contextBundle.participants,
+        groupAdmin: contextBundle.team.owner,
+        teamId: contextId
+      };
+    } else if (contextType === 'project') {
+      contextBundle = await buildProjectParticipants(contextId);
+
+      if (!contextBundle) {
+        return res.status(404).json({
+          success: false,
+          message: 'Project not found'
+        });
+      }
+
+      existingChatQuery.projectId = contextId;
+      chatPayload = {
+        chatName: contextBundle.project.title,
+        users: contextBundle.participants,
+        groupAdmin: contextBundle.project.createdBy,
+        projectId: contextId
+      };
+    }
+
+    if (!contextBundle) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported chat context'
+      });
+    }
+
+    let chat = await Chat.findOne(existingChatQuery);
+
+    if (!chat) {
+      chat = await Chat.create(chatPayload);
+    }
+
+    chat = await populateChat(chat);
+
+    res.status(200).json({
+      success: true,
+      chat
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: `Error creating ${contextType} chat`,
+      error: error.message
+    });
+  }
+};
+
 // Create group chat
 exports.createGroupChat = async (req, res) => {
   try {
-    const { name, users, description } = req.body;
+    const { name, users, description, teamId, projectId } = req.body;
 
     if (!name || !users) {
       return res.status(400).json({
@@ -89,7 +246,7 @@ exports.createGroupChat = async (req, res) => {
       });
     }
 
-    let userIds = JSON.parse(users);
+    let userIds = Array.isArray(users) ? users : JSON.parse(users);
     if (userIds.length < 2) {
       return res.status(400).json({
         success: false,
@@ -97,19 +254,39 @@ exports.createGroupChat = async (req, res) => {
       });
     }
 
-    userIds.push(req.user._id);
+    userIds = normalizeIds([...userIds, req.user._id]);
 
-    const groupChat = await Chat.create({
+    const duplicateQuery = { isGroupChat: true, users: { $all: userIds, $size: userIds.length } };
+
+    if (teamId) {
+      duplicateQuery.teamId = teamId;
+    }
+
+    if (projectId) {
+      duplicateQuery.projectId = projectId;
+    }
+
+    let groupChat = await Chat.findOne(duplicateQuery);
+
+    if (groupChat) {
+      groupChat = await populateChat(groupChat);
+      return res.status(200).json({
+        success: true,
+        chat: groupChat
+      });
+    }
+
+    const createdChat = await Chat.create({
       chatName: name,
       users: userIds,
       isGroupChat: true,
       groupAdmin: req.user._id,
-      description
+      description,
+      teamId,
+      projectId
     });
 
-    const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
-      .populate("users", "-password")
-      .populate("groupAdmin", "-password");
+    const fullGroupChat = await populateChat(createdChat);
 
     res.status(201).json({
       success: true,
@@ -122,6 +299,24 @@ exports.createGroupChat = async (req, res) => {
       error: error.message
     });
   }
+};
+
+exports.createTeamChat = async (req, res) => {
+  return createContextChat({
+    req,
+    res,
+    contextType: 'team',
+    contextId: req.params.teamId
+  });
+};
+
+exports.createProjectChat = async (req, res) => {
+  return createContextChat({
+    req,
+    res,
+    contextType: 'project',
+    contextId: req.params.projectId
+  });
 };
 
 // Update group chat
